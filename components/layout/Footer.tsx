@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SITE } from "@/lib/site";
 
 export default function Footer() {
   return (
@@ -27,6 +28,9 @@ export default function Footer() {
               <li><a href="/simulator" className="text-sm transition-colors hover:text-[var(--accent-primary)]" style={{ color: "var(--text-muted)" }}>複利試算器</a></li>
               <li><a href="/simulator?tab=housing" className="text-sm transition-colors hover:text-[var(--accent-primary)]" style={{ color: "var(--text-muted)" }}>租屋 vs 買房</a></li>
               <li><a href="/simulator?tab=mc" className="text-sm transition-colors hover:text-[var(--accent-primary)]" style={{ color: "var(--text-muted)" }}>蒙地卡羅模擬</a></li>
+              {SITE.thescopeLineUrl && (
+                <li><a href={SITE.thescopeLineUrl} target="_blank" rel="noreferrer" className="text-sm transition-colors hover:text-[var(--accent-primary)]" style={{ color: "var(--text-muted)" }}>Thescope 投資紀律 LINE ↗</a></li>
+              )}
             </ul>
           </div>
 
@@ -66,7 +70,7 @@ export default function Footer() {
             </p>
           </div>
           <p className="text-xs mt-4 text-center" style={{ color: "var(--text-muted)" }}>
-            © {new Date().getFullYear()} LifeScope. Open source under MIT License.
+            © {new Date().getFullYear()} LifeScope. 原始碼採 PolyForm Noncommercial 授權（僅供非商業使用）。
           </p>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import Link from "next/link";
+import { SITE } from "@/lib/site";
 
 export default function HomePage() {
   return (
@@ -131,6 +132,38 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+
+        {/* Cross-promo → Thescope (gated on config; hidden until the LINE URL is set) */}
+        {SITE.thescopeLineUrl && (
+          <section className="py-24" style={{ background: "var(--bg-secondary)" }}>
+            <div className="max-w-4xl mx-auto px-4 sm:px-6">
+              <div className="glass-card p-8 sm:p-10">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium mb-5" style={{ background: "var(--accent-secondary-dim)", color: "var(--accent-secondary)", border: "1px solid var(--border-accent)" }}>
+                  <span>🛡️</span> 延伸工具
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-bold mb-4">
+                  算完之後，<span className="gradient-text">誰陪你走那 20 年？</span>
+                </h2>
+                <p className="text-base leading-relaxed mb-8 max-w-2xl" style={{ color: "var(--text-secondary)" }}>
+                  退休計畫要跑 20、30 年，難的從來不是算出數字，是這一路上不被市場的漲跌嚇跑。
+                  <strong style={{ color: "var(--text-primary)" }}>Thescope</strong> 是我做的另一個免費工具——一個 LINE 機器人，
+                  幫長期投資人過濾雜訊，在你追蹤的標的大跌時，提醒你當初買進的理由還在不在。
+                </p>
+                <a
+                  href={SITE.thescopeLineUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn-accent text-base !py-3.5 !px-8 inline-block"
+                >
+                  加入 Thescope LINE 好友（免費）
+                </a>
+                <p className="text-sm mt-4" style={{ color: "var(--text-muted)" }}>
+                  同樣免費、不用註冊。
+                </p>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Final CTA */}
         <section className="py-24 relative overflow-hidden">
