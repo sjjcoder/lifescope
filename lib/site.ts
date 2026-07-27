@@ -3,7 +3,7 @@
 
 // GitHub 帳號名稱 —— 改名時只需要改這一行(頁尾連結、作者 schema、@id 都由此衍生)。
 // ⚠️ 改名後仍需手動處理的兩處:①README.md 裡的 GitHub 連結 ②git remote set-url
-const GITHUB_USER = "a0955329835-code";
+const GITHUB_USER = "sjjcoder";
 const GITHUB_REPO = "lifescope";
 
 export const SITE = {
