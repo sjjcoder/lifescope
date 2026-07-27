@@ -12,7 +12,7 @@ export const SITE = {
   // 開發者身份 —— AEO/GEO 的 author entity 錨點(讓 AI 答案引擎把作品歸屬到同一人)。
   // 未來若有個人網站,可把 url 換成個人頁並在該頁放 Person schema;name 填了才會寫進 schema。
   author: {
-    name: "",
+    name: "sjjcoder",
     url: "https://github.com/a0955329835-code",
   },
 
