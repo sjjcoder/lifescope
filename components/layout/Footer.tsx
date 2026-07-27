@@ -69,7 +69,7 @@ export default function Footer() {
           <div className="p-4 rounded-xl" style={{ background: "rgba(139, 92, 246, 0.05)", border: "1px solid rgba(139, 92, 246, 0.2)" }}>
             <p className="text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>
               <span className="font-semibold" style={{ color: "var(--accent-secondary)" }}>開發者聲明：</span>
-              本工具由開發者於業餘時間獨立建置，作為 <strong>Next.js 前端框架與 AWS Serverless 雲端運算架構</strong>之實作練習。本系統為 100% 免費且無營利之開源公益技術專案。若您有發現系統 Bug、對演算法有優化建議，或單純想進行技術交流，歡迎透過 GitHub Issue 與我聯繫。
+              本工具由開發者於業餘時間獨立建置，作為 <strong>Next.js 前端框架與 AWS Serverless 雲端運算架構</strong>之實作練習。本站不向使用者收取使用費用，所有試算功能完整開放、無付費牆。站內可能出現第三方合作連結（例如券商開戶推薦）或自願性支持管道；若您透過合作連結完成註冊，本站可能獲得推薦回饋——<strong>此類合作不影響試算引擎的邏輯與結果</strong>。若您有發現系統 Bug、對演算法有優化建議，或單純想進行技術交流，歡迎透過 GitHub Issue 與我聯繫。
             </p>
           </div>
           

@@ -14,7 +14,10 @@ export default function TermsOfServicePage() {
               <section>
                 <h2 className="text-lg font-semibold mb-2" style={{ color: "var(--text-primary)" }}>1. 服務聲明</h2>
                 <p className="leading-relaxed">
-                  本平台（LifeScope）為開發者獨立建置之非營利開源技術專案。提供之所有試算工具、圖表與數據結果，均為基於數學模型與歷史數據之模擬運算，完全免費，且僅供使用者個人財務規劃與技術交流之參考。
+                  本平台（LifeScope）為開發者獨立建置之開源技術專案。提供之所有試算工具、圖表與數據結果，均為基於數學模型與歷史數據之模擬運算，對使用者完全免費（無付費牆、無訂閱方案），且僅供使用者個人財務規劃與技術交流之參考。
+                </p>
+                <p className="leading-relaxed mt-3">
+                  本站不向使用者收取使用費用。站內可能出現第三方合作連結（例如券商開戶推薦）或自願性支持管道；若您透過合作連結完成註冊，本站可能自該第三方獲得推薦回饋。<strong>此類合作不影響試算引擎之邏輯與運算結果</strong>，亦不構成對任何金融商品之推薦，使用者無義務使用該等連結。
                 </p>
               </section>
 

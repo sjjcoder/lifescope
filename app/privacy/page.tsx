@@ -14,7 +14,7 @@ export default function PrivacyPolicyPage() {
               <section>
                 <h2 className="text-lg font-semibold mb-2" style={{ color: "var(--text-primary)" }}>1. 資料收集與儲存</h2>
                 <p className="leading-relaxed">
-                  本站為 100% 免費無營利之開源技術專案，我們不會主動收集您的個人敏感識別資訊，亦無建置雲端會員資料庫。
+                  本站為對使用者免費之開源技術專案，我們不會主動收集您的個人敏感識別資訊，亦無建置雲端會員資料庫。
                   您所輸入的各項財務參數（如：現有資產、月收支、投資比例等）及儲存的專屬劇本，僅會以匿名型式暫時儲存於您個人裝置之瀏覽器中（localStorage）。
                 </p>
               </section>
