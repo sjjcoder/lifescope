@@ -19,6 +19,18 @@ export default function Footer() {
             <p className="text-sm leading-relaxed" style={{ color: "var(--text-muted)" }}>
               用機率思維，規劃你的財務人生。
             </p>
+            <p className="text-sm mt-2" style={{ color: "var(--text-muted)" }}>
+              by{" "}
+              <a
+                href={SITE.github.profileUrl}
+                target="_blank"
+                rel="noreferrer author"
+                className="transition-colors hover:text-[var(--accent-primary)]"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                {SITE.author.name}
+              </a>
+            </p>
           </div>
 
           {/* Links */}
@@ -47,7 +59,7 @@ export default function Footer() {
           <div className="md:col-span-1">
             <h4 className="font-semibold text-sm mb-3" style={{ color: "var(--text-secondary)" }}>開發者資訊</h4>
             <ul className="space-y-2">
-              <li><a href="https://github.com/a0955329835-code/lifescope" target="_blank" rel="noreferrer" className="text-sm transition-colors hover:text-[var(--accent-primary)] flex items-center gap-2" style={{ color: "var(--text-muted)" }}>GitHub Repo</a></li>
+              <li><a href={SITE.github.repoUrl} target="_blank" rel="noreferrer" className="text-sm transition-colors hover:text-[var(--accent-primary)] flex items-center gap-2" style={{ color: "var(--text-muted)" }}>GitHub Repo</a></li>
             </ul>
           </div>
         </div>
