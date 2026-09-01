@@ -6,7 +6,7 @@ import {
   SectionHeader,
   SliderInput,
   SubSectionHeader,
-  ToggleSwitch,
+  ToggleTrack,
   InfoBox,
 } from "./SimulatorInputs";
 import LeverageBlock from "./LeverageBlock";
@@ -74,15 +74,13 @@ export default function BasicTab({
       />
 
       {/* 🏦 理專進階實務建議設定 */}
-      <SubSectionHeader title="🏦 理專進階實務建議設定" colorHex="var(--accent-warning)">
-        <ToggleSwitch
-          checked={basicParams.isBankerEnabled || false}
-          onChange={(v) => {
-            updateBasic("isBankerEnabled", v);
-          }}
-          colorClass="peer-checked:bg-amber-500"
-        />
-      </SubSectionHeader>
+      <SubSectionHeader
+        title="🏦 理專進階實務建議設定"
+        colorHex="var(--accent-warning)"
+        checked={basicParams.isBankerEnabled || false}
+        onChange={(v) => updateBasic("isBankerEnabled", v)}
+        toggleColorClass="peer-checked:bg-amber-500"
+      />
 
       {basicParams.isBankerEnabled && (
         <InfoBox colorHex="var(--accent-warning)" dashed>
@@ -98,17 +96,19 @@ export default function BasicTab({
             hint="模擬交易手續費、ETF 內扣管理費與稅務拖累。台灣指數化投資建議設為 0.3% ~ 0.5%。"
           />
           
-          <div className="flex items-center justify-between py-2 border-t border-dashed border-amber-500/10">
+          <label className="flex items-center justify-between py-2 border-t border-dashed border-amber-500/10 cursor-pointer">
+            <input
+              type="checkbox"
+              className="sr-only peer"
+              checked={basicParams.isInsuranceEnabled || false}
+              onChange={(e) => updateBasic("isInsuranceEnabled", e.target.checked)}
+            />
             <div>
               <p className="text-xs font-semibold" style={{ color: "var(--text-primary)" }}>配置風險防禦保險 (Insurance Overlay)</p>
               <p className="text-[10px] opacity-70" style={{ color: "var(--text-muted)" }}>規避人生中斷型財務黑天鵝事件的威脅</p>
             </div>
-            <ToggleSwitch
-              checked={basicParams.isInsuranceEnabled || false}
-              onChange={(v) => updateBasic("isInsuranceEnabled", v)}
-              colorClass="peer-checked:bg-emerald-500"
-            />
-          </div>
+            <ToggleTrack colorClass="peer-checked:bg-emerald-500" />
+          </label>
 
           {basicParams.isInsuranceEnabled && (
             <SliderInput
@@ -126,13 +126,13 @@ export default function BasicTab({
         </InfoBox>
       )}
 
-      <SubSectionHeader title="🌟 人生重大事件 (Life Events)" colorHex="#ec4899">
-        <ToggleSwitch
-          checked={basicParams.isEventsEnabled || false}
-          onChange={(v) => updateBasic("isEventsEnabled", v)}
-          colorClass="peer-checked:bg-pink-500"
-        />
-      </SubSectionHeader>
+      <SubSectionHeader
+        title="🌟 人生重大事件 (Life Events)"
+        colorHex="#ec4899"
+        checked={basicParams.isEventsEnabled || false}
+        onChange={(v) => updateBasic("isEventsEnabled", v)}
+        toggleColorClass="peer-checked:bg-pink-500"
+      />
 
       {basicParams.isEventsEnabled && (
         <InfoBox colorHex="#ec4899" dashed>
@@ -145,14 +145,14 @@ export default function BasicTab({
                 ];
                 updateBasic("customEvents", newEvents);
               }}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-medium hover:bg-white/10 border border-pink-500/30 hover:border-pink-500 transition-colors text-pink-600 dark:text-pink-400 cursor-pointer"
+              className="px-2.5 py-1.5 rounded-lg text-xs font-medium hover:bg-white/10 border border-pink-500/30 hover:border-pink-500 transition-colors text-pink-400 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
             >
               ＋ 新增事件
             </button>
           </div>
 
           {(basicParams.customEvents || []).length === 0 ? (
-            <p className="text-xs text-center text-pink-600/70 dark:text-pink-400/70 py-4">
+            <p className="text-xs text-center text-pink-400/70 py-4">
               尚未新增事件。可加入一次性收支或多期意外中斷事件。
             </p>
           ) : (
@@ -161,7 +161,7 @@ export default function BasicTab({
                 <div
                   key={i}
                   id={`life-event-${ev.year}-${i}`}
-                  className="flex flex-col gap-3 p-3 rounded-lg bg-white/50 dark:bg-black/20 border border-pink-500/20 transition-all duration-300"
+                  className="flex flex-col gap-3 p-3 rounded-lg bg-black/20 border border-pink-500/20 transition-all duration-300"
                 >
                   {/* 第一行: 項目名稱、年份、刪除按鈕 */}
                   <div className="flex items-center gap-2">
@@ -238,7 +238,7 @@ export default function BasicTab({
                           }
                           updateBasic("customEvents", newEvents);
                         }}
-                        className="p-1 rounded bg-black/10 dark:bg-white/10 text-xs border border-transparent outline-none cursor-pointer"
+                        className="p-1 rounded text-xs border border-transparent outline-none cursor-pointer focus-visible:border-[var(--accent-primary)]"
                         style={{ color: "var(--text-primary)", background: "var(--bg-secondary)" }}
                       >
                         <option value="one-time">單次收支</option>

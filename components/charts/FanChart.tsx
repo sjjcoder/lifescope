@@ -6,6 +6,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
   ResponsiveContainer,
   Area,
   ComposedChart,
@@ -71,10 +72,10 @@ export default function FanChart({ data }: { data: PercentileData[] }) {
             }}
             labelFormatter={(label) => `📉 退場第 ${label} 年`}
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            formatter={(value: any, name: any) => {
-              if (name === "median") return [formatTWD(Number(value) * 10000), "資產中位數 (P50)"];
-              if (name === "range75_25") return [`${formatTWD(value[0] * 10000)} ~ ${formatTWD(value[1] * 10000)}`, "大概率落點區 (P25 - P75)"];
-              if (name === "range90_10") return [`${formatTWD(value[0] * 10000)} ~ ${formatTWD(value[1] * 10000)}`, "極端狀況區 (P10 - P90)"];
+            formatter={(value: any, name: any, props: any) => {
+              const key = props?.dataKey;
+              if (key === "median") return [formatTWD(Number(value) * 10000), name];
+              if (key === "range75_25" || key === "range90_10") return [`${formatTWD(value[0] * 10000)} ~ ${formatTWD(value[1] * 10000)}`, name];
               return [value, name];
             }}
           />
@@ -85,32 +86,37 @@ export default function FanChart({ data }: { data: PercentileData[] }) {
           <Area
             type="monotone"
             dataKey="range90_10"
-            name="range90_10"
-            stroke="none"
+            name="極端狀況區 (P10-P90)"
+            stroke="var(--accent-primary)"
+            strokeOpacity={0.35}
+            strokeWidth={1}
             fill="var(--accent-primary)"
-            fillOpacity={0.15}
+            fillOpacity={0.22}
           />
 
           {/* Inner Fan P25-P75 */}
           <Area
             type="monotone"
             dataKey="range75_25"
-            name="range75_25"
-            stroke="none"
+            name="大概率落點區 (P25-P75)"
+            stroke="var(--accent-primary)"
+            strokeOpacity={0.5}
+            strokeWidth={1}
             fill="var(--accent-primary)"
-            fillOpacity={0.3}
+            fillOpacity={0.42}
           />
 
           {/* Median Line P50 */}
           <Line
             type="monotone"
             dataKey="median"
-            name="median"
+            name="資產中位數 (P50)"
             stroke="var(--accent-primary)"
             strokeWidth={3}
             dot={false}
             activeDot={{ r: 6 }}
           />
+          <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: 12 }} />
         </ComposedChart>
       </ResponsiveContainer>
     </div>

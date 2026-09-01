@@ -144,6 +144,7 @@ function SimulatorContent() {
   });
   const [mcResult, setMcResult] = useState<MCResult | null>(null);
   const [isLoadingMC, setIsLoadingMC] = useState(false);
+  const [mcError, setMcError] = useState("");
 
   const updateMC = useCallback(<K extends keyof MCParams>(key: K, val: MCParams[K]) => {
     setMcParams((p) => ({ ...p, [key]: val }));
@@ -152,6 +153,7 @@ function SimulatorContent() {
 
   const runMonteCarlo = async () => {
     setIsLoadingMC(true);
+    setMcError("");
     try {
       let scenarioEvents: { year: number, drop: number }[] = [];
       if (mcParams.isScenarioEnabled && mcParams.scenarioId !== "none") {
@@ -194,10 +196,11 @@ function SimulatorContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setMcResult(data);
     } catch {
-      alert("模擬失敗，請稍後再試或檢查網路！");
+      setMcError("模擬失敗，請稍後再試或檢查網路連線。");
     } finally {
       setIsLoadingMC(false);
     }
@@ -319,7 +322,7 @@ function SimulatorContent() {
               財務<span style={{ color: "var(--accent-primary)" }}>沙盤推演</span>
             </h1>
             <p className="text-base" style={{ color: "var(--text-secondary)" }}>
-              拖動滑桿即時看到你的財務未來走向。所有運算在你的瀏覽器中完成，資料不會上傳。
+              拖動滑桿即時看到你的財務未來走向。複利試算與租屋 vs 買房完全在你的瀏覽器中完成、資料不會上傳；蒙地卡羅壓測因運算量大，會將你設定的參數傳送到雲端進行 1,000 次模擬。
             </p>
           </div>
 
@@ -331,30 +334,33 @@ function SimulatorContent() {
                   <span className="w-1.5 h-4 rounded-full bg-blue-500" />
                   全局基礎參數
                 </span>
-                <span className="text-xs opacity-70" style={{ color: "var(--text-muted)" }}>（以下設定會影響所有分頁的計算）</span>
+                <span className="text-xs opacity-70" style={{ color: "var(--text-muted)" }}>（影響「複利試算」與「蒙地卡羅壓測」；租屋 vs 買房使用自己獨立的參數）</span>
               </div>
               
               {/* ETF 預設移動至此 */}
               <div className="flex flex-wrap items-center gap-1.5">
                 <span className="text-xs font-medium mr-1" style={{ color: "var(--text-secondary)" }}>快速套用市場假設：</span>
-                {ETF_PRESETS.map((preset) => (
+                {ETF_PRESETS.map((preset) => {
+                  const isSelected = basicParams.annualReturn === preset.return;
+                  return (
                   <button
                     key={preset.name}
-                    onClick={() => { 
-                      updateBasic("annualReturn", preset.return); 
-                      updateMC("volatility", preset.vol); 
+                    onClick={() => {
+                      updateBasic("annualReturn", preset.return);
+                      updateMC("volatility", preset.vol);
                     }}
-                    className="px-2.5 py-1 text-[11px] rounded-full border transition-all hover:bg-white/5 active:scale-95"
-                    style={{ 
-                      borderColor: basicParams.annualReturn === preset.return ? "var(--accent-primary)" : "var(--border-subtle)", 
-                      background: basicParams.annualReturn === preset.return ? "var(--accent-primary-dim)" : "transparent",
-                      color: basicParams.annualReturn === preset.return ? "var(--accent-primary)" : "var(--text-secondary)",
-                      fontWeight: basicParams.annualReturn === preset.return ? 600 : 400
-                    }}
+                    className={`px-2.5 py-1 text-[11px] rounded-full border transition-all cursor-pointer active:scale-95 ${isSelected ? "" : "chip-button"}`}
+                    style={isSelected ? {
+                      borderColor: "var(--accent-primary)",
+                      background: "var(--accent-primary-dim)",
+                      color: "var(--accent-primary)",
+                      fontWeight: 600,
+                    } : undefined}
                   >
                     {preset.name}
                   </button>
-                ))}
+                  );
+                })}
               </div>
             </div>
             
@@ -441,7 +447,7 @@ function SimulatorContent() {
                     🧬 人生路徑發展 (Life Path)
                     <span className="text-xs font-normal ml-1" style={{ color: "var(--text-muted)" }}>— 設定各階段家庭規模，自動套用經濟學遞減開支模型</span>
                   </h3>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {lifeStages.map((stage, i) => (
                       <div key={i} className="p-4 rounded-xl flex flex-col gap-3" style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-subtle)" }}>
                         <div className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{STAGE_LABELS[i]}</div>
@@ -561,11 +567,17 @@ function SimulatorContent() {
                       </p>
                       <button
                         onClick={runMonteCarlo}
-                        className="mt-6 px-6 py-2 rounded-full font-medium"
-                        style={{ background: "var(--accent-primary-dim)", color: "var(--accent-primary)" }}
+                        disabled={isLoadingMC}
+                        className="mt-6 px-6 py-2 rounded-full font-medium cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2"
+                        style={{ background: "var(--accent-primary-dim)", color: "var(--accent-primary)", "--tw-ring-color": "var(--accent-primary)" } as React.CSSProperties}
                       >
-                        點擊左側開始測試
+                        {isLoadingMC ? "模擬中…" : "🚀 立即開始模擬"}
                       </button>
+                      {mcError && (
+                        <div className="mt-4 px-4 py-2.5 rounded-lg text-sm" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171" }}>
+                          ⚠️ {mcError}
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="space-y-6">

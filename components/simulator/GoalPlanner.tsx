@@ -19,7 +19,7 @@ export default function GoalPlanner({
   currentReturn,
   currentInvestment,
 }: GoalPlannerProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(true);
   const [targetAssets, setTargetAssets] = useState(30000000); // 預設 3,000 萬
   const [targetYears, setTargetYears] = useState(20); // 預設 20 年
 
@@ -48,8 +48,9 @@ export default function GoalPlanner({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between font-bold text-base outline-none cursor-pointer text-left"
-        style={{ color: "var(--text-primary)" }}
+        aria-expanded={isOpen}
+        className="w-full flex items-center justify-between font-bold text-base cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 rounded-lg"
+        style={{ color: "var(--text-primary)", "--tw-ring-color": "var(--accent-primary)", "--tw-ring-offset-color": "var(--bg-card)" } as React.CSSProperties}
       >
         <span className="flex items-center gap-2">
           <span className="w-1.5 h-4 rounded-full shadow-sm" style={{ background: "var(--accent-success)" }} />

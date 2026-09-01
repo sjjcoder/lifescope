@@ -1,10 +1,84 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 // 格式化完整數字（帶千分位）
 export function formatNumber(num: number): string {
   return Math.round(num).toLocaleString("zh-TW");
+}
+
+// 把使用者輸入的千分位字串轉回數字：先濾掉逗號等格式字元，保留負號與小數點
+function parseFormattedNumber(raw: string): number {
+  const cleaned = raw.replace(/,/g, "").trim();
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : 0;
+}
+
+// 千分位數字輸入框：編輯中顯示原始數字（方便打字、貼上），失焦/送出才格式化成千分位顯示。
+// 用 type="text" + inputMode="decimal"，兼顧手機數字鍵盤與逗號顯示（原生 type="number" 無法顯示逗號）。
+function FormattedNumberInput({
+  value,
+  onCommit,
+  className,
+  min,
+  max,
+  ariaLabel,
+}: {
+  value: number;
+  onCommit: (v: number) => void;
+  className?: string;
+  min?: number;
+  max?: number;
+  ariaLabel?: string;
+}) {
+  const [text, setText] = useState(formatNumber(value));
+  const editingRef = useRef(false);
+
+  useEffect(() => {
+    if (!editingRef.current) setText(formatNumber(value));
+  }, [value]);
+
+  const commit = () => {
+    editingRef.current = false;
+    let n = parseFormattedNumber(text);
+    if (min !== undefined && n < min) n = min;
+    if (max !== undefined && n > max) n = max;
+    setText(formatNumber(n));
+    onCommit(n);
+  };
+
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      aria-label={ariaLabel}
+      value={text}
+      onFocus={() => {
+        editingRef.current = true;
+        setText(String(parseFormattedNumber(text)));
+      }}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          commit();
+          (e.target as HTMLInputElement).blur();
+        }
+      }}
+      className={className}
+    />
+  );
+}
+
+// 手風琴/收合區塊的開關軌道視覺（純樣式，不含互動）。互動交給外層 <label> 原生托管的 checkbox，
+// 避免「外層 onClick + 內層 checkbox」疊加造成的雙重觸發問題。
+export function ToggleTrack({ colorClass = "" }: { colorClass?: string }) {
+  return (
+    <div
+      className={`w-9 h-5 rounded-full bg-[var(--bg-elevated)] peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all after:shadow-sm peer-focus-visible:ring-2 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-[var(--bg-secondary)] transition-colors relative shrink-0 ${colorClass}`}
+      style={{ "--tw-ring-color": "var(--accent-primary)" } as React.CSSProperties}
+    />
+  );
 }
 
 export function SliderInput({
@@ -97,41 +171,39 @@ export function SliderInput({
           <button
             type="button"
             onClick={handleDecrement}
-            className="w-6 h-6 flex items-center justify-center rounded-md border transition-all text-xs font-bold select-none cursor-pointer"
-            style={{ borderColor: "var(--border-subtle)", background: "var(--bg-secondary)", color: "var(--text-secondary)" }}
+            aria-label={`減少${label}`}
+            className="relative w-6 h-6 flex items-center justify-center rounded-md border transition-all text-xs font-bold select-none cursor-pointer focus-visible:outline-none focus-visible:ring-2 before:content-[''] before:absolute before:-inset-2"
+            style={{ borderColor: "var(--border-subtle)", background: "var(--bg-secondary)", color: "var(--text-secondary)", "--tw-ring-color": "var(--accent-primary)" } as React.CSSProperties}
           >
             -
           </button>
-          <input
-            type="number"
-            id={id}
+          <FormattedNumberInput
             value={localValue}
-            onChange={handleInputChange}
-            onBlur={handleInputBlur}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                handleInputBlur();
-                (e.target as HTMLInputElement).blur();
-              }
+            onCommit={(v) => {
+              setLocalValue(v);
+              if (v > currentMax) setCurrentMax(Math.ceil(v * 1.5));
+              onChange(v < min ? min : v);
             }}
-            className="input-field text-right !w-28 !py-1 !px-2 text-sm number-display"
+            ariaLabel={label}
             min={min}
-            max={currentMax}
-            step={step}
+            className="input-field text-right !w-28 !py-1 !px-2 text-sm number-display focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
           />
           <button
             type="button"
             onClick={handleIncrement}
-            className="w-6 h-6 flex items-center justify-center rounded-md border transition-all text-xs font-bold select-none cursor-pointer"
-            style={{ borderColor: "var(--border-subtle)", background: "var(--bg-secondary)", color: "var(--text-secondary)" }}
+            aria-label={`增加${label}`}
+            className="relative w-6 h-6 flex items-center justify-center rounded-md border transition-all text-xs font-bold select-none cursor-pointer focus-visible:outline-none focus-visible:ring-2 before:content-[''] before:absolute before:-inset-2"
+            style={{ borderColor: "var(--border-subtle)", background: "var(--bg-secondary)", color: "var(--text-secondary)", "--tw-ring-color": "var(--accent-primary)" } as React.CSSProperties}
           >
             +
           </button>
-          <span className="text-sm ml-1 shrink-0 w-5" style={{ color: "var(--text-muted)" }}>{unit}</span>
+          <span className="text-sm ml-1 shrink-0 w-5" style={{ color: "var(--text-secondary)" }}>{unit}</span>
         </div>
       </div>
       <input
         type="range"
+        id={id}
+        aria-label={label}
         value={localValue}
         onChange={handleRangeChange}
         onMouseUp={handleRangeCommit}
@@ -164,41 +236,19 @@ export function CompactInput({
   min?: number;
   max?: number;
 }) {
-  const [localVal, setLocalVal] = useState(value);
-
-  useEffect(() => {
-    setLocalVal(value);
-  }, [value]);
-
-  const handleBlur = () => {
-    let finalVal = localVal;
-    if (min !== undefined && finalVal < min) finalVal = min;
-    if (max !== undefined && finalVal > max) finalVal = max;
-    setLocalVal(finalVal);
-    onChange(finalVal);
-  };
-
   return (
     <div>
-      <label className="text-xs block mb-1 font-medium" style={{ color: "var(--text-muted)" }}>{label}</label>
+      <label className="text-xs block mb-1 font-medium" style={{ color: "var(--text-secondary)" }}>{label}</label>
       <div className="flex items-center gap-1.5">
-        <input
-          type="number"
-          value={localVal}
-          onChange={(e) => setLocalVal(Number(e.target.value))}
-          onBlur={handleBlur}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              handleBlur();
-              (e.target as HTMLInputElement).blur();
-            }
-          }}
-          step={step}
+        <FormattedNumberInput
+          value={value}
+          onCommit={onChange}
+          ariaLabel={label}
           min={min}
           max={max}
-          className="input-field !py-1.5 !px-2 text-sm number-display flex-1 text-right"
+          className="input-field !py-1.5 !px-2 text-sm number-display flex-1 text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
         />
-        <span className="text-xs shrink-0 w-4" style={{ color: "var(--text-muted)" }}>{unit}</span>
+        <span className="text-xs shrink-0 w-4" style={{ color: "var(--text-secondary)" }}>{unit}</span>
       </div>
     </div>
   );
@@ -228,21 +278,47 @@ export function SectionHeader({
 export function SubSectionHeader({
   title,
   colorHex,
+  checked,
+  onChange,
+  toggleColorClass,
   children,
 }: {
   title: string;
   colorHex: string;
+  /** 提供 checked+onChange 時，整列標題（含圖示與文字）都會變成可點擊的開關；不提供時維持純標題分段用法 */
+  checked?: boolean;
+  onChange?: (checked: boolean) => void;
+  toggleColorClass?: string;
   children?: React.ReactNode;
 }) {
+  const titleContent = (
+    <span className="text-base font-bold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+      <span className="w-1.5 h-4 rounded-full shadow-sm shrink-0" style={{ background: colorHex }} />
+      {title}
+    </span>
+  );
+
   return (
     <div className="mt-8 mb-5 border-t pt-6" style={{ borderColor: "var(--border-subtle)" }}>
-      <div className="flex items-center justify-between">
-        <h3 className="text-base font-bold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-          <span className="w-1.5 h-4 rounded-full shadow-sm" style={{ background: colorHex }} />
-          {title}
-        </h3>
-        {children}
-      </div>
+      {onChange ? (
+        // 整列包在同一個 <label> 裡：點文字、色點或開關都會原生觸發 checkbox，
+        // 不用另外寫 onClick，也不會有「外層點擊 + 內層 checkbox」疊加雙重觸發的風險。
+        <label className="flex items-center justify-between cursor-pointer select-none -m-2 p-2 rounded-lg transition-colors hover:bg-white/[0.03]">
+          <input
+            type="checkbox"
+            className="sr-only peer"
+            checked={!!checked}
+            onChange={(e) => onChange(e.target.checked)}
+          />
+          {titleContent}
+          <ToggleTrack colorClass={toggleColorClass} />
+        </label>
+      ) : (
+        <div className="flex items-center justify-between">
+          {titleContent}
+          {children}
+        </div>
+      )}
     </div>
   );
 }
@@ -281,9 +357,9 @@ export function ToggleSwitch({
   colorClass: string;
 }) {
   return (
-    <label className="relative inline-flex items-center cursor-pointer">
+    <label className="relative inline-flex items-center cursor-pointer p-2 -m-2">
       <input type="checkbox" className="sr-only peer" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-      <div className={`w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 ${colorClass}`}></div>
+      <ToggleTrack colorClass={colorClass} />
     </label>
   );
 }
@@ -301,9 +377,9 @@ export function StatCard({
 }) {
   return (
     <div className="stat-card">
-      <p className="text-sm font-medium mb-1" style={{ color: "var(--text-muted)" }}>{label}</p>
+      <p className="text-sm font-medium mb-1" style={{ color: "var(--text-secondary)" }}>{label}</p>
       <p className="text-2xl sm:text-3xl font-bold number-display" style={{ color: color || "var(--text-primary)" }}>{value}</p>
-      {sub && <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>{sub}</p>}
+      {sub && <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>{sub}</p>}
     </div>
   );
 }

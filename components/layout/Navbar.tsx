@@ -33,10 +33,11 @@ export default function Navbar() {
           {/* Mobile hamburger */}
           <button
             id="mobile-menu-toggle"
-            className="md:hidden p-2 rounded-lg"
+            className="md:hidden p-2 rounded-lg cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
             style={{ color: "var(--text-secondary)" }}
             onClick={() => setMobileOpen(!mobileOpen)}
-            aria-label="開啟選單"
+            aria-label={mobileOpen ? "關閉選單" : "開啟選單"}
+            aria-expanded={mobileOpen}
           >
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               {mobileOpen ? (

@@ -6,7 +6,6 @@ import {
   SectionHeader,
   SliderInput,
   SubSectionHeader,
-  ToggleSwitch,
   InfoBox,
 } from "./SimulatorInputs";
 import LeverageBlock from "./LeverageBlock";
@@ -55,7 +54,7 @@ export default function MonteCarloTab({
 
       <div className="flex gap-2 mb-5 p-1 rounded-xl" style={{ background: "var(--bg-secondary)" }}>
         <button
-          className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+          className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] ${
             mcParams.phase === "accumulation"
               ? "bg-white text-slate-900 shadow-sm"
               : "opacity-60 hover:opacity-100"
@@ -65,7 +64,7 @@ export default function MonteCarloTab({
           💪 財富累積期
         </button>
         <button
-          className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+          className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] ${
             mcParams.phase === "decumulation"
               ? "bg-white text-slate-900 shadow-sm"
               : "opacity-60 hover:opacity-100"
@@ -77,7 +76,7 @@ export default function MonteCarloTab({
       </div>
 
       <InfoBox colorHex="#94a3b8">
-        <p className="text-xs text-slate-500 dark:text-slate-400">
+        <p className="text-xs text-slate-400">
           {mcParams.phase === "accumulation"
             ? "💡 模擬工作期間：每月持續投入月投資額，不會變賣資產。破產機率為 0。"
             : "⚠️ 模擬退休期間：停止工作投入，每月變賣資產支付月支出，測驗資產存活率。"}
@@ -129,13 +128,13 @@ export default function MonteCarloTab({
         hint="大盤歷史波動約 15%。含公債配置可降至 5~10%。"
       />
 
-      <SubSectionHeader title="歷史災難壓力測試 (黑天鵝劇本)" colorHex="#ef4444">
-        <ToggleSwitch
-          checked={mcParams.isScenarioEnabled}
-          onChange={(v) => updateMC("isScenarioEnabled", v)}
-          colorClass="peer-checked:bg-red-500"
-        />
-      </SubSectionHeader>
+      <SubSectionHeader
+        title="歷史災難壓力測試 (黑天鵝劇本)"
+        colorHex="#ef4444"
+        checked={mcParams.isScenarioEnabled}
+        onChange={(v) => updateMC("isScenarioEnabled", v)}
+        toggleColorClass="peer-checked:bg-red-500"
+      />
 
       {mcParams.isScenarioEnabled && (
         <div className="mb-4">
@@ -186,13 +185,13 @@ export default function MonteCarloTab({
         </div>
       )}
 
-      <SubSectionHeader title="跳躍擴散模型 (每年隨機崩盤)" colorHex="#6366f1">
-        <ToggleSwitch
-          checked={mcParams.isJumpEnabled}
-          onChange={(v) => updateMC("isJumpEnabled", v)}
-          colorClass="peer-checked:bg-indigo-500"
-        />
-      </SubSectionHeader>
+      <SubSectionHeader
+        title="跳躍擴散模型 (每年隨機崩盤)"
+        colorHex="#6366f1"
+        checked={mcParams.isJumpEnabled}
+        onChange={(v) => updateMC("isJumpEnabled", v)}
+        toggleColorClass="peer-checked:bg-indigo-500"
+      />
 
       {mcParams.isJumpEnabled && (
         <InfoBox colorHex="#6366f1" dashed>
@@ -222,13 +221,13 @@ export default function MonteCarloTab({
         </InfoBox>
       )}
 
-      <SubSectionHeader title="動態提領防禦 (Dynamic Spending)" colorHex="#10b981">
-        <ToggleSwitch
-          checked={mcParams.isDynamic}
-          onChange={(v) => updateMC("isDynamic", v)}
-          colorClass="peer-checked:bg-emerald-500"
-        />
-      </SubSectionHeader>
+      <SubSectionHeader
+        title="動態提領防禦 (Dynamic Spending)"
+        colorHex="#10b981"
+        checked={mcParams.isDynamic}
+        onChange={(v) => updateMC("isDynamic", v)}
+        toggleColorClass="peer-checked:bg-emerald-500"
+      />
 
       {mcParams.isDynamic && (
         <InfoBox colorHex="#10b981" dashed>
@@ -251,8 +250,8 @@ export default function MonteCarloTab({
       <button
         onClick={runMonteCarlo}
         disabled={isLoadingMC}
-        className="w-full mt-5 py-3.5 rounded-xl font-bold flex items-center justify-center transition-all disabled:opacity-50"
-        style={{ background: "var(--accent-primary)", color: "white" }}
+        className="w-full mt-5 py-3.5 rounded-xl font-bold flex items-center justify-center transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+        style={{ background: "var(--accent-primary)", color: "white", "--tw-ring-color": "var(--accent-primary)", "--tw-ring-offset-color": "var(--bg-secondary)" } as React.CSSProperties}
       >
         {isLoadingMC ? (
           <span className="flex items-center gap-2">

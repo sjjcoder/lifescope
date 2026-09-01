@@ -26,12 +26,16 @@
   /* Text */
   --text-primary: #F1F5F9;
   --text-secondary: #94A3B8;
-  --text-muted: #64748B;
+  /* 調亮自 #64748B：原色在深色卡片背景上對比度僅 3.3~4.0:1，未達 WCAG AA 一般文字的 4.5:1 門檻 */
+  --text-muted: #7C8CA3;
   --text-accent: #00D4AA;
 
   /* Borders */
   --border-subtle: rgba(148, 163, 184, 0.1);
   --border-accent: rgba(0, 212, 170, 0.3);
+  /* 給獨立於卡片/輸入框邊框之外的「輕量按鈕」用，比 --border-subtle 更可見，避免看起來像純文字 */
+  --border-chip: rgba(148, 163, 184, 0.35);
+  --bg-chip: rgba(148, 163, 184, 0.06);
 
   /* Shadows */
   --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.3);
@@ -147,9 +151,21 @@ input[type="range"] {
   appearance: none;
   width: 100%;
   height: 6px;
+  /* 視覺軌道維持 6px 細線，但用透明的上下 padding 把「點軌道跳值」的實際可點擊帶撐到接近 44px，
+     不改變版面看到的粗細 */
+  padding-block: 19px;
+  background: transparent;
+  outline: none;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
   background: var(--bg-elevated);
   border-radius: 3px;
-  outline: none;
+}
+input[type="range"]::-moz-range-track {
+  height: 6px;
+  background: var(--bg-elevated);
+  border-radius: 3px;
 }
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
@@ -161,10 +177,44 @@ input[type="range"]::-webkit-slider-thumb {
   cursor: pointer;
   box-shadow: 0 0 10px rgba(0, 212, 170, 0.4);
   transition: all 0.2s ease;
+  margin-top: -7px; /* 抵銷 runnable-track 高度差，讓 thumb 仍垂直居中於軌道 */
+}
+input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(0, 212, 170, 0.4);
+  transition: all 0.2s ease;
 }
 input[type="range"]::-webkit-slider-thumb:hover {
   transform: scale(1.2);
   box-shadow: 0 0 15px rgba(0, 212, 170, 0.6);
+}
+input[type="range"]:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 3px;
+}
+input[type="range"]:focus-visible::-moz-range-thumb {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 3px;
+}
+
+/* 快速套用預設按鈕（如市場假設 chip）：獨立於卡片/輸入框邊框系統之外，未選中狀態也要有清楚的可點擊存在感 */
+.chip-button {
+  background: var(--bg-chip);
+  border: 1px solid var(--border-chip);
+  color: var(--text-secondary);
+}
+.chip-button:hover {
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+}
+.chip-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-primary-dim);
 }
 
 /* Animated gradient text */

@@ -4,7 +4,6 @@ import React from "react";
 import { BasicParams } from "@/lib/calculator";
 import {
   SubSectionHeader,
-  ToggleSwitch,
   InfoBox,
   SliderInput,
   formatNumber,
@@ -27,20 +26,20 @@ export default function LeverageBlock({
 }: LeverageBlockProps) {
   return (
     <>
-      <SubSectionHeader title="⚖️ 財務槓桿策略 (信貸)" colorHex="#3b82f6">
-        <ToggleSwitch
-          checked={isLeverageEnabled}
-          onChange={(v) => {
-            setIsLeverageEnabled(v);
-            if (!v) updateBasic("leverageAmount", 0);
-          }}
-          colorClass="peer-checked:bg-blue-500"
-        />
-      </SubSectionHeader>
+      <SubSectionHeader
+        title="⚖️ 財務槓桿策略 (信貸)"
+        colorHex="#3b82f6"
+        checked={isLeverageEnabled}
+        onChange={(v) => {
+          setIsLeverageEnabled(v);
+          if (!v) updateBasic("leverageAmount", 0);
+        }}
+        toggleColorClass="peer-checked:bg-blue-500"
+      />
 
       {isLeverageEnabled && (
         <InfoBox colorHex="#3b82f6" dashed>
-          <div className="p-2.5 mb-5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs leading-relaxed text-amber-600 dark:text-amber-400">
+          <div className="p-2.5 mb-5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs leading-relaxed text-amber-400">
             ⚠️ <b>現金流提醒：</b> 系統已自動從「月投資額」中扣除貸款本息。若投資額不足，將會自動變賣資產償還。
           </div>
           <SliderInput id="leverageAmount" label="借貸本金" value={basicParams.leverageAmount || 0} onChange={(v) => updateBasic("leverageAmount", v)} min={0} max={20000000} step={100000} unit="元" />
@@ -49,7 +48,7 @@ export default function LeverageBlock({
           <SliderInput id="leverageRecurYears" label="自動續借頻率" value={basicParams.leverageRecurYears || 0} onChange={(v) => updateBasic("leverageRecurYears", v)} min={0} max={10} step={1} unit="年" hint="0 代表不續借。每隔 X 年自動補足本金並重置債務。" />
           
           {(basicParams.leverageAmount || 0) > 0 && (basicParams.leverageYears || 0) > 0 && (
-            <div className="mt-5 p-2.5 rounded-lg text-xs font-medium flex justify-between items-center bg-blue-500/10 text-blue-600 dark:text-blue-400">
+            <div className="mt-5 p-2.5 rounded-lg text-xs font-medium flex justify-between items-center bg-blue-500/10 text-blue-400">
               <span>💡 試算每月還本付息：</span>
               <span className="text-sm font-bold">約 {formatNumber(computedMonthlyLoan)} 元</span>
             </div>
