@@ -2,6 +2,7 @@
 
 import React, { useMemo } from "react";
 import {
+  BasicParams,
   calculateRequiredMonthlyInvestment,
   calculateRequiredReturn,
   calculateRequiredYears,
@@ -68,21 +69,47 @@ interface GoalTargets {
   setTargetYears: (v: number) => void;
 }
 
-// 左側輸入面板：設定「目標回推」分頁自己的兩個目標參數
-export function GoalPlannerInputs({ targetAssets, setTargetAssets, targetYears, setTargetYears }: GoalTargets) {
+interface GoalPlannerInputsProps extends GoalTargets {
+  basicParams: BasicParams;
+  updateBasic: <K extends keyof BasicParams>(key: K, val: BasicParams[K]) => void;
+}
+
+// 左側輸入面板：目前每月投資額（與其他頁籤共用同一份設定）+ 這個分頁自己的兩個目標參數
+export function GoalPlannerInputs({
+  targetAssets,
+  setTargetAssets,
+  targetYears,
+  setTargetYears,
+  basicParams,
+  updateBasic,
+}: GoalPlannerInputsProps) {
   return (
     <>
       <SectionHeader icon="🎯" title="設定回推目標" colorHex="var(--accent-secondary)" bgColorHex="var(--accent-primary-dim)" />
       <SliderInput
-        id="targetAssets"
-        label="目標淨資產"
-        value={targetAssets}
-        onChange={setTargetAssets}
-        min={1000000}
-        max={200000000}
-        step={1000000}
+        id="goalMonthlyInvestment"
+        label="月投資額"
+        value={basicParams.monthlyInvestment}
+        onChange={(v) => updateBasic("monthlyInvestment", v)}
+        min={0}
+        max={1000000}
+        step={5000}
         unit="元"
+        hint="與「複利試算」「蒙地卡羅壓測」共用同一份設定，調整這裡其他頁籤也會一起變動。"
       />
+
+      <div className="mt-6">
+        <SliderInput
+          id="targetAssets"
+          label="目標淨資產"
+          value={targetAssets}
+          onChange={setTargetAssets}
+          min={1000000}
+          max={200000000}
+          step={1000000}
+          unit="元"
+        />
+      </div>
       <PresetChips presets={TARGET_ASSET_PRESETS} activeValue={targetAssets} onSelect={setTargetAssets} />
 
       <div className="mt-6">
@@ -100,7 +127,7 @@ export function GoalPlannerInputs({ targetAssets, setTargetAssets, targetYears, 
       <PresetChips presets={TARGET_YEARS_PRESETS} activeValue={targetYears} onSelect={setTargetYears} />
 
       <p className="text-[11px] mt-4 opacity-60 leading-relaxed" style={{ color: "var(--text-muted)" }}>
-        💡 現有資產、年化報酬率沿用上方「全局基礎參數」；月投資額沿用「複利試算」頁籤目前的設定。
+        💡 現有資產、年化報酬率沿用上方「全局基礎參數」。
       </p>
     </>
   );

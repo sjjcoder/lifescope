@@ -432,6 +432,8 @@ function SimulatorContent() {
                     setTargetAssets={setTargetAssets}
                     targetYears={targetYears}
                     setTargetYears={setTargetYears}
+                    basicParams={basicParams}
+                    updateBasic={updateBasic}
                   />
                 )}
 
