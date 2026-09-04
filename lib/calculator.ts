@@ -502,8 +502,47 @@ export function calculateRequiredReturn(
     }
     iterations++;
   }
-  
+
   return Math.round(low * 100) / 100;
+}
+
+/**
+ * 逆向計算：在固定每月投資、報酬率與現有資產下，要達成目標資產需要幾年
+ * 透過二分搜尋法逼近求解；100 年內仍達不到則回傳 null
+ */
+export function calculateRequiredYears(
+  targetAssets: number,
+  monthlyInvestment: number,
+  annualReturn: number,
+  initialAssets: number
+): number | null {
+  if (initialAssets >= targetAssets) return 0;
+
+  const r = annualReturn / 100 / 12;
+  const fv = (months: number) =>
+    r === 0
+      ? initialAssets + monthlyInvestment * months
+      : initialAssets * Math.pow(1 + r, months) + monthlyInvestment * ((Math.pow(1 + r, months) - 1) / r);
+
+  let low = 0;
+  let high = 100 * 12; // 上限 100 年 (以月為單位搜尋)
+  if (fv(high) < targetAssets) return null; // 100 年內都不夠，視為無法達成
+
+  let iterations = 0;
+  while (low <= high && iterations < 50) {
+    const mid = (low + high) / 2;
+    if (Math.abs(fv(mid) - targetAssets) < 100) {
+      return Math.round((mid / 12) * 10) / 10;
+    }
+    if (fv(mid) > targetAssets) {
+      high = mid;
+    } else {
+      low = mid;
+    }
+    iterations++;
+  }
+
+  return Math.round((low / 12) * 10) / 10;
 }
 
 

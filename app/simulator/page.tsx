@@ -37,7 +37,7 @@ import BasicTab from "@/components/simulator/BasicTab";
 import HousingTab from "@/components/simulator/HousingTab";
 import MonteCarloTab, { CRISIS_SCENARIOS } from "@/components/simulator/MonteCarloTab";
 import ScenarioManager from "@/components/simulator/ScenarioManager";
-import GoalPlanner from "@/components/simulator/GoalPlanner";
+import { GoalPlannerInputs, GoalPlannerResults } from "@/components/simulator/GoalPlanner";
 
 
 
@@ -62,21 +62,22 @@ const FAMILY_OPTIONS = [
 
 function SimulatorContent() {
   const searchParams = useSearchParams();
-  const initialTab = searchParams.get("tab") === "housing" ? "housing" : searchParams.get("tab") === "mc" ? "mc" : "basic";
+  const tabFromParam = (v: string | null): "basic" | "housing" | "mc" | "goal" =>
+    v === "housing" || v === "mc" || v === "goal" ? v : "basic";
+  const initialTab = tabFromParam(searchParams.get("tab"));
 
-  const [activeTab, setActiveTab] = useState<"basic" | "housing" | "mc">(initialTab);
+  const [activeTab, setActiveTab] = useState<"basic" | "housing" | "mc" | "goal">(initialTab);
 
   useEffect(() => {
-    const tabParam = searchParams.get("tab");
-    if (tabParam === "housing" || tabParam === "basic" || tabParam === "mc") {
-      setActiveTab(tabParam as "basic" | "housing" | "mc");
-    } else {
-      setActiveTab("basic");
-    }
+    setActiveTab(tabFromParam(searchParams.get("tab")));
   }, [searchParams]);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [saveName, setSaveName] = useState("");
   const [saveMessage, setSaveMessage] = useState("");
+
+  // Goal Planner (目標回推) targets
+  const [targetAssets, setTargetAssets] = useState(30000000); // 預設 3,000 萬
+  const [targetYears, setTargetYears] = useState(20); // 預設 20 年
 
   // Basic params
   const [basicParams, setBasicParams] = useState<BasicParams>({
@@ -334,7 +335,7 @@ function SimulatorContent() {
                   <span className="w-1.5 h-4 rounded-full bg-blue-500" />
                   全局基礎參數
                 </span>
-                <span className="text-xs opacity-70" style={{ color: "var(--text-muted)" }}>（影響「複利試算」與「蒙地卡羅壓測」；租屋 vs 買房使用自己獨立的參數）</span>
+                <span className="text-xs opacity-70" style={{ color: "var(--text-muted)" }}>（影響「複利試算」「蒙地卡羅壓測」與「目標回推」；租屋 vs 買房使用自己獨立的參數）</span>
               </div>
               
               {/* ETF 預設移動至此 */}
@@ -384,6 +385,9 @@ function SimulatorContent() {
             <button id="tab-mc" className={`tab-button ${activeTab === "mc" ? "active" : ""}`} onClick={() => setActiveTab("mc")}>
               🎲 蒙地卡羅壓測
             </button>
+            <button id="tab-goal" className={`tab-button ${activeTab === "goal" ? "active" : ""}`} onClick={() => setActiveTab("goal")}>
+              🎯 目標回推
+            </button>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -422,7 +426,16 @@ function SimulatorContent() {
                   />
                 )}
 
-                {activeTab !== "mc" && (
+                {activeTab === "goal" && (
+                  <GoalPlannerInputs
+                    targetAssets={targetAssets}
+                    setTargetAssets={setTargetAssets}
+                    targetYears={targetYears}
+                    setTargetYears={setTargetYears}
+                  />
+                )}
+
+                {(activeTab === "basic" || activeTab === "housing") && (
                   <ScenarioManager
                     scenarios={scenarios}
                     saveName={saveName}
@@ -517,12 +530,6 @@ function SimulatorContent() {
                       </div>
                     </div>
                   )}
-
-                  <GoalPlanner
-                    currentAssets={basicParams.currentAssets}
-                    currentReturn={basicParams.annualReturn}
-                    currentInvestment={basicParams.monthlyInvestment}
-                  />
 
                   <div className="glass-card p-5">
                     <h3 className="font-semibold text-base mb-4" style={{ color: "var(--text-secondary)" }}>資產成長曲線</h3>
@@ -623,6 +630,14 @@ function SimulatorContent() {
                     </div>
                   )}
                 </>
+              ) : activeTab === "goal" ? (
+                <GoalPlannerResults
+                  currentAssets={basicParams.currentAssets}
+                  currentReturn={basicParams.annualReturn}
+                  currentInvestment={basicParams.monthlyInvestment}
+                  targetAssets={targetAssets}
+                  targetYears={targetYears}
+                />
               ) : null}
             </div>
           </div>
