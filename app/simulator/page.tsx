@@ -519,7 +519,10 @@ function SimulatorContent() {
                   )}
 
                   <div className="glass-card p-5">
-                    <h3 className="font-semibold text-base mb-4" style={{ color: "var(--text-secondary)" }}>資產成長曲線</h3>
+                    <h3 className="font-semibold text-base mb-1" style={{ color: "var(--text-secondary)" }}>資產成長曲線</h3>
+                    <p className="text-[11px] mb-4 opacity-60 leading-relaxed" style={{ color: "var(--text-muted)" }}>
+                      💡 <b>名目總資產</b>：未來那一年帳戶裡實際會有的金額（未扣通膨）。<b>真實淨資產</b>：把名目總資產換算成「今天的購買力」，反映通膨侵蝕後實際能買到多少東西。兩者都已扣除尚未還清的貸款本金，年限越長、通膨累積越多，兩線會逐漸拉開。
+                    </p>
                     <ProjectionChart
                       data={projectionData}
                       events={basicParams.isEventsEnabled ? basicParams.customEvents : []}

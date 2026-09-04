@@ -2,9 +2,27 @@
 
 import React, { useState, useEffect, useRef } from "react";
 
-// 格式化完整數字（帶千分位）
-export function formatNumber(num: number): string {
-  return Math.round(num).toLocaleString("zh-TW");
+// 格式化完整數字（帶千分位）。decimals > 0 時保留該位數的小數（供 step 為小數的欄位，如摩擦損耗 0.1% 使用）。
+export function formatNumber(num: number, decimals: number = 0): string {
+  if (decimals <= 0) return Math.round(num).toLocaleString("zh-TW");
+  const fixed = Number(num.toFixed(decimals));
+  return fixed.toLocaleString("zh-TW", {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+}
+
+// 依 step 大小推算應保留的小數位數（0.1 -> 1, 0.5 -> 1, 1 或 5000 -> 0）
+function getDecimalPlaces(step: number): number {
+  if (!Number.isFinite(step) || step === 0) return 0;
+  const str = step.toString();
+  const dotIndex = str.indexOf(".");
+  return dotIndex === -1 ? 0 : str.length - dotIndex - 1;
+}
+
+// 依小數位數四捨五入，避免浮點數加減（如 0.1 + 0.2）造成的誤差殘留
+function roundToDecimals(value: number, decimals: number): number {
+  return decimals > 0 ? Number(value.toFixed(decimals)) : Math.round(value);
 }
 
 // 把使用者輸入的千分位字串轉回數字：先濾掉逗號等格式字元，保留負號與小數點
@@ -22,6 +40,7 @@ function FormattedNumberInput({
   className,
   min,
   max,
+  decimals = 0,
   ariaLabel,
 }: {
   value: number;
@@ -29,21 +48,23 @@ function FormattedNumberInput({
   className?: string;
   min?: number;
   max?: number;
+  decimals?: number;
   ariaLabel?: string;
 }) {
-  const [text, setText] = useState(formatNumber(value));
+  const [text, setText] = useState(formatNumber(value, decimals));
   const editingRef = useRef(false);
 
   useEffect(() => {
-    if (!editingRef.current) setText(formatNumber(value));
-  }, [value]);
+    if (!editingRef.current) setText(formatNumber(value, decimals));
+  }, [value, decimals]);
 
   const commit = () => {
     editingRef.current = false;
     let n = parseFormattedNumber(text);
+    if (decimals > 0) n = roundToDecimals(n, decimals);
     if (min !== undefined && n < min) n = min;
     if (max !== undefined && n > max) n = max;
-    setText(formatNumber(n));
+    setText(formatNumber(n, decimals));
     onCommit(n);
   };
 
@@ -104,6 +125,7 @@ export function SliderInput({
 }) {
   const [localValue, setLocalValue] = useState(value);
   const [currentMax, setCurrentMax] = useState(max);
+  const decimals = getDecimalPlaces(step);
 
   // 當外部傳入的值變動時（例如載入劇本），同步更新局部狀態與最大值上限
   useEffect(() => {
@@ -147,7 +169,7 @@ export function SliderInput({
   };
 
   const handleIncrement = () => {
-    const newVal = localValue + step;
+    const newVal = roundToDecimals(localValue + step, decimals);
     if (newVal > currentMax) {
       setCurrentMax(Math.ceil(newVal * 1.5));
     }
@@ -156,7 +178,7 @@ export function SliderInput({
   };
 
   const handleDecrement = () => {
-    const newVal = Math.max(min, localValue - step);
+    const newVal = Math.max(min, roundToDecimals(localValue - step, decimals));
     setLocalValue(newVal);
     onChange(newVal);
   };
@@ -186,6 +208,7 @@ export function SliderInput({
             }}
             ariaLabel={label}
             min={min}
+            decimals={decimals}
             className="input-field text-right !w-28 !py-1 !px-2 text-sm number-display focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
           />
           <button
