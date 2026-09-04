@@ -114,7 +114,7 @@ export default function ProjectionChart({
           <Line
             type="monotone"
             dataKey="displayRealAssets"
-            name={formattedData.some((d) => d.displayLoan > 0) ? "真實淨資產" : "實質資產 (通膨後)"}
+            name="真實淨資產"
             stroke="#f59e0b"
             strokeWidth={3}
             strokeDasharray={formattedData.some((d) => d.displayLoan > 0) ? "5 5" : undefined}

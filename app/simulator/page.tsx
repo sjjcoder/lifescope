@@ -519,15 +519,25 @@ function SimulatorContent() {
                   )}
 
                   <div className="glass-card p-5">
-                    <h3 className="font-semibold text-base mb-1" style={{ color: "var(--text-secondary)" }}>資產成長曲線</h3>
-                    <p className="text-[11px] mb-4 opacity-60 leading-relaxed" style={{ color: "var(--text-muted)" }}>
-                      💡 <b>名目總資產</b>：未來那一年帳戶裡實際會有的金額（未扣通膨）。<b>真實淨資產</b>：把名目總資產換算成「今天的購買力」，反映通膨侵蝕後實際能買到多少東西。兩者都已扣除尚未還清的貸款本金，年限越長、通膨累積越多，兩線會逐漸拉開。
-                    </p>
+                    <h3 className="font-semibold text-base mb-4" style={{ color: "var(--text-secondary)" }}>資產成長曲線</h3>
                     <ProjectionChart
                       data={projectionData}
                       events={basicParams.isEventsEnabled ? basicParams.customEvents : []}
                       onEventClick={handleEventClick}
                     />
+                  </div>
+
+                  <div className="glass-card p-5">
+                    <h3 className="font-semibold text-sm mb-3" style={{ color: "var(--text-secondary)" }}>📋 圖表名詞說明</h3>
+                    <ul className="space-y-1.5 text-xs" style={{ color: "var(--text-muted)" }}>
+                      {isLeverageEnabled && (
+                        <li>• <b>投資帳戶總市值</b>：帳戶內全部資金的市值，含借貸投入市場的錢，尚未扣除還欠的貸款本金。</li>
+                      )}
+                      <li>• <b>名目總資產</b>：{isLeverageEnabled ? "投資帳戶總市值再扣除尚未還清的貸款本金" : "投資帳戶市值"}，也就是當年帳面上的實際淨資產（未考慮通膨）。</li>
+                      <li>• <b>真實淨資產</b>：把名目總資產換算成「今天的購買力」，反映通膨侵蝕後實際能買到多少東西。</li>
+                      <li>• <b>投入本金</b>：累計自己實際投入的資金（不含借貸），作為對照市場報酬貢獻的基準線。</li>
+                      <li>• 年限越長、通膨累積越多，名目總資產與真實淨資產兩線會逐漸拉開。</li>
+                    </ul>
                   </div>
 
                   <GoalPlanner
