@@ -327,6 +327,22 @@ function SimulatorContent() {
             </p>
           </div>
 
+          {/* Tabs — kept above any content that changes size per tab, so the nav row itself never jumps when switching */}
+          <div className="flex gap-2 mb-6 p-1 rounded-xl w-fit no-print" style={{ background: "var(--bg-secondary)" }}>
+            <button id="tab-basic" className={`tab-button ${activeTab === "basic" ? "active" : ""}`} onClick={() => setActiveTab("basic")}>
+              📈 複利試算
+            </button>
+            <button id="tab-goal" className={`tab-button ${activeTab === "goal" ? "active" : ""}`} onClick={() => setActiveTab("goal")}>
+              🎯 目標回推
+            </button>
+            <button id="tab-mc" className={`tab-button ${activeTab === "mc" ? "active" : ""}`} onClick={() => setActiveTab("mc")}>
+              🎲 蒙地卡羅壓測
+            </button>
+            <button id="tab-housing" className={`tab-button ${activeTab === "housing" ? "active" : ""}`} onClick={() => setActiveTab("housing")}>
+              🏠 租屋 vs 買房
+            </button>
+          </div>
+
           {/* === Global Config Band (basic/mc/goal only — housing uses its own independent params) === */}
           {activeTab !== "housing" && (
             <div className="glass-card p-5 mb-6 relative overflow-hidden" style={{ border: "1px solid var(--accent-primary-dim)" }}>
@@ -375,22 +391,6 @@ function SimulatorContent() {
               </div>
             </div>
           )}
-
-          {/* Tabs */}
-          <div className="flex gap-2 mb-6 p-1 rounded-xl w-fit no-print" style={{ background: "var(--bg-secondary)" }}>
-            <button id="tab-basic" className={`tab-button ${activeTab === "basic" ? "active" : ""}`} onClick={() => setActiveTab("basic")}>
-              📈 複利試算
-            </button>
-            <button id="tab-goal" className={`tab-button ${activeTab === "goal" ? "active" : ""}`} onClick={() => setActiveTab("goal")}>
-              🎯 目標回推
-            </button>
-            <button id="tab-mc" className={`tab-button ${activeTab === "mc" ? "active" : ""}`} onClick={() => setActiveTab("mc")}>
-              🎲 蒙地卡羅壓測
-            </button>
-            <button id="tab-housing" className={`tab-button ${activeTab === "housing" ? "active" : ""}`} onClick={() => setActiveTab("housing")}>
-              🏠 租屋 vs 買房
-            </button>
-          </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* ===== Left Panel: Tab-Specific Controls ===== */}
