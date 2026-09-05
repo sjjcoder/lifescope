@@ -327,52 +327,54 @@ function SimulatorContent() {
             </p>
           </div>
 
-          {/* === Global Config Band === */}
-          <div className="glass-card p-5 mb-6 relative overflow-hidden" style={{ border: "1px solid var(--accent-primary-dim)" }}>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold flex items-center gap-2" style={{ color: "var(--accent-primary)" }}>
-                  <span className="w-1.5 h-4 rounded-full bg-blue-500" />
-                  全局基礎參數
-                </span>
-                <span className="text-xs opacity-70" style={{ color: "var(--text-muted)" }}>（影響「複利試算」「蒙地卡羅壓測」與「目標回推」；租屋 vs 買房使用自己獨立的參數）</span>
+          {/* === Global Config Band (basic/mc/goal only — housing uses its own independent params) === */}
+          {activeTab !== "housing" && (
+            <div className="glass-card p-5 mb-6 relative overflow-hidden" style={{ border: "1px solid var(--accent-primary-dim)" }}>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold flex items-center gap-2" style={{ color: "var(--accent-primary)" }}>
+                    <span className="w-1.5 h-4 rounded-full bg-blue-500" />
+                    全局基礎參數
+                  </span>
+                  <span className="text-xs opacity-70" style={{ color: "var(--text-muted)" }}>（影響「複利試算」「蒙地卡羅壓測」與「目標回推」）</span>
+                </div>
+
+                {/* ETF 預設移動至此 */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-xs font-medium mr-1" style={{ color: "var(--text-secondary)" }}>快速套用市場假設：</span>
+                  {ETF_PRESETS.map((preset) => {
+                    const isSelected = basicParams.annualReturn === preset.return;
+                    return (
+                    <button
+                      key={preset.name}
+                      onClick={() => {
+                        updateBasic("annualReturn", preset.return);
+                        updateMC("volatility", preset.vol);
+                      }}
+                      className={`px-2.5 py-1 text-[11px] rounded-full border transition-all cursor-pointer active:scale-95 ${isSelected ? "" : "chip-button"}`}
+                      style={isSelected ? {
+                        borderColor: "var(--accent-primary)",
+                        background: "var(--accent-primary-dim)",
+                        color: "var(--accent-primary)",
+                        fontWeight: 600,
+                      } : undefined}
+                    >
+                      {preset.name}
+                    </button>
+                    );
+                  })}
+                </div>
               </div>
-              
-              {/* ETF 預設移動至此 */}
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-xs font-medium mr-1" style={{ color: "var(--text-secondary)" }}>快速套用市場假設：</span>
-                {ETF_PRESETS.map((preset) => {
-                  const isSelected = basicParams.annualReturn === preset.return;
-                  return (
-                  <button
-                    key={preset.name}
-                    onClick={() => {
-                      updateBasic("annualReturn", preset.return);
-                      updateMC("volatility", preset.vol);
-                    }}
-                    className={`px-2.5 py-1 text-[11px] rounded-full border transition-all cursor-pointer active:scale-95 ${isSelected ? "" : "chip-button"}`}
-                    style={isSelected ? {
-                      borderColor: "var(--accent-primary)",
-                      background: "var(--accent-primary-dim)",
-                      color: "var(--accent-primary)",
-                      fontWeight: 600,
-                    } : undefined}
-                  >
-                    {preset.name}
-                  </button>
-                  );
-                })}
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-6 gap-y-4">
+                <CompactInput label="現有資產" value={basicParams.currentAssets} onChange={(v) => updateBasic("currentAssets", v)} unit="元" step={100000} min={0} max={150000000} />
+                <CompactInput label="計畫年數" value={basicParams.investmentYears} onChange={(v) => updateBasic("investmentYears", v)} unit="年" step={1} min={1} max={50} />
+                <CompactInput label="年化報酬率" value={basicParams.annualReturn} onChange={(v) => updateBasic("annualReturn", v)} unit="%" step={0.5} min={0} max={20} />
+                <CompactInput label="通膨率" value={basicParams.inflationRate} onChange={(v) => updateBasic("inflationRate", v)} unit="%" step={0.5} min={0} max={10} />
+                <CompactInput label="年調薪幅度" value={basicParams.salaryGrowthRate} onChange={(v) => updateBasic("salaryGrowthRate", v)} unit="%" step={0.5} min={0} max={10} />
               </div>
             </div>
-            
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-6 gap-y-4">
-              <CompactInput label="現有資產" value={basicParams.currentAssets} onChange={(v) => updateBasic("currentAssets", v)} unit="元" step={100000} min={0} max={150000000} />
-              <CompactInput label="計畫年數" value={basicParams.investmentYears} onChange={(v) => updateBasic("investmentYears", v)} unit="年" step={1} min={1} max={50} />
-              <CompactInput label="年化報酬率" value={basicParams.annualReturn} onChange={(v) => updateBasic("annualReturn", v)} unit="%" step={0.5} min={0} max={20} />
-              <CompactInput label="通膨率" value={basicParams.inflationRate} onChange={(v) => updateBasic("inflationRate", v)} unit="%" step={0.5} min={0} max={10} />
-              <CompactInput label="年調薪幅度" value={basicParams.salaryGrowthRate} onChange={(v) => updateBasic("salaryGrowthRate", v)} unit="%" step={0.5} min={0} max={10} />
-            </div>
-          </div>
+          )}
 
           {/* Tabs */}
           <div className="flex gap-2 mb-6 p-1 rounded-xl w-fit no-print" style={{ background: "var(--bg-secondary)" }}>
