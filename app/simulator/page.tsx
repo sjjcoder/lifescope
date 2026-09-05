@@ -381,14 +381,14 @@ function SimulatorContent() {
             <button id="tab-basic" className={`tab-button ${activeTab === "basic" ? "active" : ""}`} onClick={() => setActiveTab("basic")}>
               📈 複利試算
             </button>
-            <button id="tab-housing" className={`tab-button ${activeTab === "housing" ? "active" : ""}`} onClick={() => setActiveTab("housing")}>
-              🏠 租屋 vs 買房
+            <button id="tab-goal" className={`tab-button ${activeTab === "goal" ? "active" : ""}`} onClick={() => setActiveTab("goal")}>
+              🎯 目標回推
             </button>
             <button id="tab-mc" className={`tab-button ${activeTab === "mc" ? "active" : ""}`} onClick={() => setActiveTab("mc")}>
               🎲 蒙地卡羅壓測
             </button>
-            <button id="tab-goal" className={`tab-button ${activeTab === "goal" ? "active" : ""}`} onClick={() => setActiveTab("goal")}>
-              🎯 目標回推
+            <button id="tab-housing" className={`tab-button ${activeTab === "housing" ? "active" : ""}`} onClick={() => setActiveTab("housing")}>
+              🏠 租屋 vs 買房
             </button>
           </div>
 

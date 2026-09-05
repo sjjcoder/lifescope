@@ -38,8 +38,9 @@ export default function Footer() {
             <h4 className="font-semibold text-sm mb-3" style={{ color: "var(--text-secondary)" }}>功能</h4>
             <ul className="space-y-2">
               <li><a href="/simulator" className="text-sm transition-colors hover:text-[var(--accent-primary)]" style={{ color: "var(--text-muted)" }}>複利試算器</a></li>
-              <li><a href="/simulator?tab=housing" className="text-sm transition-colors hover:text-[var(--accent-primary)]" style={{ color: "var(--text-muted)" }}>租屋 vs 買房</a></li>
+              <li><a href="/simulator?tab=goal" className="text-sm transition-colors hover:text-[var(--accent-primary)]" style={{ color: "var(--text-muted)" }}>目標回推</a></li>
               <li><a href="/simulator?tab=mc" className="text-sm transition-colors hover:text-[var(--accent-primary)]" style={{ color: "var(--text-muted)" }}>蒙地卡羅模擬</a></li>
+              <li><a href="/simulator?tab=housing" className="text-sm transition-colors hover:text-[var(--accent-primary)]" style={{ color: "var(--text-muted)" }}>租屋 vs 買房</a></li>
               {SITE.thescopeLineUrl && (
                 <li><a href={SITE.thescopeLineUrl} target="_blank" rel="noreferrer" className="text-sm transition-colors hover:text-[var(--accent-primary)]" style={{ color: "var(--text-muted)" }}>Thescope 投資紀律 LINE ↗</a></li>
               )}
