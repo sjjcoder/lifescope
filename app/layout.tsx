@@ -3,6 +3,10 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { SITE } from "@/lib/site";
 
+// Inter 由 next/font 在建置時下載並自託管，訪客瀏覽器不再連到 fonts.googleapis.com
+// （避免把使用者 IP 送給第三方，也讓 CSP 的 style-src / font-src 只需允許 'self'）。
+// 中文字型改用系統內建的繁中字型堆疊（見 globals.css）：Noto Sans TC 在 Google 被切成 120 多個檔案，
+// 用 next/font 自託管時只要其中一個下載逾時，開發伺服器就會整頁 500，不值得為此承擔建置與開發的脆弱性。
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],

@@ -39,8 +39,11 @@ export default function ProjectionChart({
 
   if (!data || data.length === 0) return null;
 
+  const last = data[data.length - 1];
+  const summary = `資產成長曲線：第 ${last.year} 年名目總資產 ${formatTWD(last.assets)}，真實淨資產 ${formatTWD(last.realAssets)}，累計投入本金 ${formatTWD(last.invested)}`;
+
   return (
-    <div className="h-[300px] w-full">
+    <div className="h-[300px] w-full" role="img" aria-label={summary}>
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart
           data={formattedData}

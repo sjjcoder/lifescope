@@ -1,0 +1,20 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    # 新版本先冷卻 7 天再升，避開「剛發布幾十分鐘就被劫持」的供應鏈攻擊窗口（npm audit 對這種零日無效）
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
+    groups:
+      next-react:
+        patterns: ["next", "eslint-config-next", "react", "react-dom", "@types/react", "@types/react-dom"]
+      tooling:
+        patterns: ["tailwindcss", "@tailwindcss/postcss", "eslint", "typescript", "@types/node"]
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"

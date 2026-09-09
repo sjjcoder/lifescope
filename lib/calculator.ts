@@ -82,8 +82,18 @@ function getFamilyMultiplier(year: number, lifeStages?: LifeStage[]): number {
   return FAMILY_MULTIPLIERS[lifeStages[lifeStages.length - 1]?.familySize] || 1.0;
 }
 
+/**
+ * 「年化報酬率」轉每月複利利率（有效利率）：(1+r)^(1/12)-1。
+ * 這樣每月複利 12 次後剛好等於使用者輸入的年化數字，也與蒙地卡羅引擎的年頻率一致。
+ * ⚠️ 貸款/房貸不要用這個：台灣銀行牌告的是名目年利率，月利率就是 年利率/12。
+ */
+export function annualToMonthlyRate(annualPct: number): number {
+  return Math.pow(1 + annualPct / 100, 1 / 12) - 1;
+}
+
 // 格式化金額為台幣格式
 export function formatTWD(amount: number): string {
+  if (Math.abs(amount) < 0.5) return "0"; // 避免 Math.round(-0.4) 顯示成 "-0"
   if (Math.abs(amount) >= 1e8) {
     return `${(amount / 1e8).toFixed(2)} 億`;
   }
@@ -117,7 +127,7 @@ export function calculateMonthlyLoanPayment(principal: number, annualRate: numbe
  * 基礎複利試算
  * 每月投入固定金額，以年化報酬率複利成長
  */
-export function calculateProjection(params: BasicParams, lifeStages?: LifeStage[]): YearlyData[] {
+export function calculateProjection(params: BasicParams): YearlyData[] {
   const {
     currentAssets,
     monthlyInvestment,
@@ -140,18 +150,22 @@ export function calculateProjection(params: BasicParams, lifeStages?: LifeStage[
   // 投資年化報酬率扣除摩擦損耗 (僅在理專建議開啟時生效)
   const actualFriction = isBankerEnabled ? frictionRate : 0;
   const effectiveReturn = Math.max(0, annualReturn - actualFriction);
-  const monthlyRate = effectiveReturn / 100 / 12;
+  const monthlyRate = annualToMonthlyRate(effectiveReturn);
   const data: YearlyData[] = [];
-  
+
+  // 沒有還款年限的借款等於白拿本金，視為未啟用槓桿
+  const loanPrincipal = leverageYears > 0 ? leverageAmount : 0;
+  const loanMonthlyRate = leverageRate / 100 / 12;
+
   // 借貸邏輯：期初資產增加
-  let assets = currentAssets + leverageAmount;
+  let assets = currentAssets + loanPrincipal;
   let totalInvested = currentAssets; // 本金不含借款
-  
+
   // 預算每月還款額 (等額本息)
-  const monthlyLoanPayment = calculateMonthlyLoanPayment(leverageAmount, leverageRate, leverageYears);
-  
-  // 記錄剩餘貸款本金 (概算，用於扣除淨資產)
-  let remainingLoan = leverageAmount;
+  const monthlyLoanPayment = calculateMonthlyLoanPayment(loanPrincipal, leverageRate, leverageYears);
+
+  // 記錄剩餘貸款本金 (逐月攤還，用於扣除淨資產)
+  let remainingLoan = loanPrincipal;
 
   data.push({
     year: 0,
@@ -167,33 +181,30 @@ export function calculateProjection(params: BasicParams, lifeStages?: LifeStage[
   for (let year = 1; year <= investmentYears; year++) {
     // 檢查是否觸發「借新還舊」
     const isRecurYear = leverageRecurYears > 0 && year > 1 && (year - 1) % leverageRecurYears === 0;
-    if (isRecurYear && remainingLoan < leverageAmount) {
-      const refillAmount = leverageAmount - remainingLoan;
+    if (isRecurYear && loanPrincipal > 0 && remainingLoan < loanPrincipal) {
+      const refillAmount = loanPrincipal - remainingLoan;
       assets += refillAmount; // 借出來的錢投入市場
-      remainingLoan = leverageAmount; // 債務回到初始值
+      remainingLoan = loanPrincipal; // 債務回到初始值
     }
 
     const salaryFactor = Math.pow(1 + salaryGrowthRate / 100, year - 1);
     const adjustedInvestment = monthlyInvestment * salaryFactor;
-    
-    // 如果還在貸款期間 (或是有續借模式)，這筆現金流必須被扣除
-    const isPayingLoan = leverageRecurYears > 0 || year <= leverageYears;
-    const loanDeduction = (leverageAmount > 0 && isPayingLoan) ? monthlyLoanPayment : 0;
 
     // 保費作為必需性現金支出，按月扣除 (僅在理專建議與保險均開啟時生效)
     const monthlyInsuranceDeduction = (isBankerEnabled && isInsuranceEnabled) ? insurancePremium : 0;
 
     for (let month = 0; month < 12; month++) {
-      // 每月資產增長 = 先計算本月投資報酬，再加入(或扣除)現金流（含保費）
-      assets = assets * (1 + monthlyRate) + adjustedInvestment - loanDeduction - monthlyInsuranceDeduction;
-      
-      // 更新剩餘貸款本金
-      if (isPayingLoan && remainingLoan > 0) {
-        const monthlyLoanInterest = remainingLoan * (leverageRate / 100 / 12);
-        const principalPaid = monthlyLoanPayment - monthlyLoanInterest;
-        remainingLoan = Math.max(0, remainingLoan - principalPaid);
+      // 只有還有欠款時才扣本息；最後一期只還剩餘本金，避免多扣（也修正續借頻率 > 貸款年限時的幻影支出）
+      let loanPayment = 0;
+      if (remainingLoan > 0) {
+        const interest = remainingLoan * loanMonthlyRate;
+        const principalPaid = Math.min(Math.max(0, monthlyLoanPayment - interest), remainingLoan);
+        loanPayment = interest + principalPaid;
+        remainingLoan -= principalPaid;
       }
-      
+
+      // 每月資產增長 = 先計算本月投資報酬，再加入(或扣除)現金流（含保費、貸款本息）
+      assets = assets * (1 + monthlyRate) + adjustedInvestment - loanPayment - monthlyInsuranceDeduction;
       totalInvested += adjustedInvestment;
     }
 
@@ -252,6 +263,7 @@ export function calculateProjection(params: BasicParams, lifeStages?: LifeStage[
  * PMT = P × r(1+r)^n / ((1+r)^n - 1)
  */
 export function calculateMonthlyMortgage(principal: number, annualRate: number, years: number): number {
+  if (principal <= 0 || years <= 0) return 0;
   const r = annualRate / 100 / 12;
   const n = years * 12;
   if (r === 0) return principal / n;
@@ -300,7 +312,7 @@ export function calculateHousingCompare(params: HousingParams): HousingCompareDa
   // 寬限期內每月僅付利息
   const monthlyInterestOnlyPayment = loanAmount * (loanRate / 100 / 12);
   
-  const monthlyInvestRate = investReturn / 100 / 12;
+  const monthlyInvestRate = annualToMonthlyRate(investReturn);
 
   const data: HousingCompareData[] = [];
 
@@ -324,7 +336,8 @@ export function calculateHousingCompare(params: HousingParams): HousingCompareDa
   });
 
   for (let year = 1; year <= yearsToCompare; year++) {
-    const yearlyMaintenance = housePrice * (maintenanceRate / 100);
+    // 稅金與修繕基金隨當年房屋市值成長，而不是永遠用購入價（否則 50 年下來會系統性偏向買房）
+    const yearlyMaintenance = currentHouseValue * (maintenanceRate / 100);
 
     for (let month = 0; month < 12; month++) {
       // 核心公平對比邏輯：確保兩者每月拿出口袋的現金流(支出+存款)完全一樣
@@ -383,23 +396,18 @@ export function calculateHousingCompare(params: HousingParams): HousingCompareDa
  * 財務自由 = 資產 × 4% 被動收入 >= 年支出
  */
 export function calculateFIREAge(params: BasicParams, lifeStages: LifeStage[] = []): number | null {
-  const { currentAssets, monthlyInvestment, monthlyExpense, annualReturn, inflationRate, salaryGrowthRate = 0 } = params;
-  const monthlyRate = annualReturn / 100 / 12;
+  const { monthlyExpense, inflationRate } = params;
   const yearlyExpense = monthlyExpense * 12;
-  let assets = currentAssets;
 
-  for (let year = 1; year <= 100; year++) {
-    const salaryFactor = Math.pow(1 + salaryGrowthRate / 100, year - 1);
-    const adjustedInvestment = monthlyInvestment * salaryFactor;
-
-    for (let month = 0; month < 12; month++) {
-      assets = assets * (1 + monthlyRate) + adjustedInvestment;
-    }
-    // 4% 法則：年被動收入 = 資產 × 4%，考慮通膨 × 家庭規模乘數
-    const familyMult = getFamilyMultiplier(year, lifeStages);
-    const adjustedExpense = yearlyExpense * familyMult * Math.pow(1 + inflationRate / 100, year);
-    if (assets * 0.04 >= adjustedExpense) {
-      return year;
+  // 直接重用主投影（含槓桿、摩擦、保費、人生事件），確保「幾年後財務自由」與旁邊的資產曲線是同一套模型
+  const path = calculateProjection({ ...params, investmentYears: 100 });
+  for (const point of path) {
+    if (point.year === 0) continue;
+    // 4% 法則：年被動收入 = 淨資產 × 4%，考慮通膨 × 家庭規模乘數
+    const familyMult = getFamilyMultiplier(point.year, lifeStages);
+    const adjustedExpense = yearlyExpense * familyMult * Math.pow(1 + inflationRate / 100, point.year);
+    if (point.assets * 0.04 >= adjustedExpense) {
+      return point.year;
     }
   }
   return null; // 100 年內無法達成
@@ -438,110 +446,102 @@ export interface MCResult {
 }
 
 /**
- * 逆向計算：在特定預期報酬下，要達成目標資產，每月需要投資多少元
+ * 目標回推共用引擎：現有資產 + 每月投入（隨年調薪成長）以「年化報酬率」複利 N 個月後的終值。
+ * 複利慣例與 calculateProjection 相同（有效月利率、月初投入），因此「照目前步調」曲線會與複利試算分頁對得起來。
+ * 刻意不含槓桿／摩擦／保費／人生事件——那些屬於複利試算的進階設定，目標回推維持單純。
+ */
+export function projectGoalFutureValue(
+  initialAssets: number,
+  monthlyInvestment: number,
+  annualReturn: number,
+  months: number,
+  salaryGrowthRate = 0
+): number {
+  const r = annualToMonthlyRate(annualReturn);
+  let assets = initialAssets;
+  for (let m = 0; m < months; m++) {
+    const contribution = monthlyInvestment * Math.pow(1 + salaryGrowthRate / 100, Math.floor(m / 12));
+    assets = assets * (1 + r) + contribution;
+  }
+  return assets;
+}
+
+const MAX_GOAL_YEARS = 100;
+
+/**
+ * 逆向計算：在特定預期報酬下，要達成目標資產，第一年每月需要投資多少元（之後隨調薪成長）。
+ * 終值對「每月投入」是線性的：FV = FV(只有本金) + 月投入 × FV(每月投 1 元)，直接解出，不需搜尋。
  */
 export function calculateRequiredMonthlyInvestment(
   targetAssets: number,
   years: number,
   annualReturn: number,
-  initialAssets: number
+  initialAssets: number,
+  salaryGrowthRate = 0
 ): number {
   if (years <= 0) return 0;
-  const n = years * 12;
-  const r = annualReturn / 100 / 12;
-  
-  if (r === 0) {
-    return Math.max(0, (targetAssets - initialAssets) / n);
-  }
-  
-  const compoundPV = initialAssets * Math.pow(1 + r, n);
-  if (compoundPV >= targetAssets) return 0; // 初始資產自己複利就夠了
-  
-  const numerator = (targetAssets - compoundPV) * r;
-  const denominator = Math.pow(1 + r, n) - 1;
-  return Math.round(numerator / denominator);
+  const months = years * 12;
+  const fromPrincipal = projectGoalFutureValue(initialAssets, 0, annualReturn, months, salaryGrowthRate);
+  if (fromPrincipal >= targetAssets) return 0; // 初始資產自己複利就夠了
+  const perUnit = projectGoalFutureValue(0, 1, annualReturn, months, salaryGrowthRate);
+  return Math.round((targetAssets - fromPrincipal) / perUnit);
 }
 
 /**
  * 逆向計算：在固定每月投資與現有資產下，要達成目標資產，需要的年化報酬率 (%)
- * 透過二分搜尋法 (Binary Search) 逼近求解
+ * 透過二分搜尋法逼近求解；連 100% 年化都達不到時回傳 null（UI 顯示「目標過高」）。
  */
 export function calculateRequiredReturn(
   targetAssets: number,
   years: number,
   monthlyInvestment: number,
-  initialAssets: number
+  initialAssets: number,
+  salaryGrowthRate = 0
 ): number | null {
   if (years <= 0) return null;
-  const n = years * 12;
-  
-  // 檢查 0% 報酬率是否就夠了
-  if (initialAssets + monthlyInvestment * n >= targetAssets) {
-    return 0;
-  }
-  
-  let low = 0;
-  let high = 100; // 上限 100% 年化報酬率
-  let iterations = 0;
-  
-  while (low <= high && iterations < 50) {
-    const mid = (low + high) / 2;
-    const r = mid / 100 / 12;
-    
-    // 年金終值公式加上初始資產複利
-    const fv = initialAssets * Math.pow(1 + r, n) + monthlyInvestment * ((Math.pow(1 + r, n) - 1) / r);
-    
-    if (Math.abs(fv - targetAssets) < 100) { // 誤差小於 100 元即可
-      return Math.round(mid * 100) / 100;
-    }
-    
-    if (fv > targetAssets) {
-      high = mid;
-    } else {
-      low = mid;
-    }
-    iterations++;
-  }
+  const months = years * 12;
+  const fvAt = (annualPct: number) =>
+    projectGoalFutureValue(initialAssets, monthlyInvestment, annualPct, months, salaryGrowthRate);
 
-  return Math.round(low * 100) / 100;
+  if (fvAt(0) >= targetAssets) return 0; // 0% 報酬就夠了
+  if (fvAt(100) < targetAssets) return null; // 100% 年化都不夠 → 目標不可達
+
+  let low = 0;
+  let high = 100;
+  for (let i = 0; i < 60; i++) {
+    const mid = (low + high) / 2;
+    const fv = fvAt(mid);
+    if (Math.abs(fv - targetAssets) < 100) return Math.round(mid * 100) / 100; // 誤差小於 100 元即可
+    if (fv > targetAssets) high = mid;
+    else low = mid;
+  }
+  return Math.round(((low + high) / 2) * 100) / 100;
 }
 
 /**
  * 逆向計算：在固定每月投資、報酬率與現有資產下，要達成目標資產需要幾年
- * 透過二分搜尋法逼近求解；100 年內仍達不到則回傳 null
+ * 對「月數」做整數二分搜尋，找出第一個達標的月份；100 年內仍達不到則回傳 null
  */
 export function calculateRequiredYears(
   targetAssets: number,
   monthlyInvestment: number,
   annualReturn: number,
-  initialAssets: number
+  initialAssets: number,
+  salaryGrowthRate = 0
 ): number | null {
   if (initialAssets >= targetAssets) return 0;
-
-  const r = annualReturn / 100 / 12;
-  const fv = (months: number) =>
-    r === 0
-      ? initialAssets + monthlyInvestment * months
-      : initialAssets * Math.pow(1 + r, months) + monthlyInvestment * ((Math.pow(1 + r, months) - 1) / r);
+  const fvAt = (months: number) =>
+    projectGoalFutureValue(initialAssets, monthlyInvestment, annualReturn, months, salaryGrowthRate);
 
   let low = 0;
-  let high = 100 * 12; // 上限 100 年 (以月為單位搜尋)
-  if (fv(high) < targetAssets) return null; // 100 年內都不夠，視為無法達成
+  let high = MAX_GOAL_YEARS * 12;
+  if (fvAt(high) < targetAssets) return null; // 100 年內都不夠，視為無法達成
 
-  let iterations = 0;
-  while (low <= high && iterations < 50) {
-    const mid = (low + high) / 2;
-    if (Math.abs(fv(mid) - targetAssets) < 100) {
-      return Math.round((mid / 12) * 10) / 10;
-    }
-    if (fv(mid) > targetAssets) {
-      high = mid;
-    } else {
-      low = mid;
-    }
-    iterations++;
+  while (low < high) {
+    const mid = Math.floor((low + high) / 2);
+    if (fvAt(mid) >= targetAssets) high = mid;
+    else low = mid + 1;
   }
-
   return Math.round((low / 12) * 10) / 10;
 }
 

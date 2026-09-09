@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { BasicParams, CustomEvent } from "@/lib/calculator";
 import {
   SectionHeader,
@@ -167,6 +167,7 @@ export default function BasicTab({
                   <div className="flex items-center gap-2">
                     <input
                       type="text"
+                      aria-label={`事件 ${i + 1} 名稱`}
                       value={ev.name}
                       onChange={(e) => {
                         const newEvents = [...(basicParams.customEvents || [])];
@@ -180,6 +181,7 @@ export default function BasicTab({
                       <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>第</span>
                       <input
                         type="number"
+                        aria-label={`事件 ${i + 1} 發生年份`}
                         value={ev.year}
                         onChange={(e) => {
                           const newEvents = [...(basicParams.customEvents || [])];
@@ -196,7 +198,8 @@ export default function BasicTab({
                         newEvents.splice(i, 1);
                         updateBasic("customEvents", newEvents);
                       }}
-                      className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-red-500/20 text-red-500 transition-colors shrink-0 cursor-pointer"
+                      aria-label={`刪除事件「${ev.name || `事件 ${i + 1}`}」`}
+                      className="relative w-6 h-6 flex items-center justify-center rounded-md hover:bg-red-500/20 text-red-500 transition-colors shrink-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 before:content-[''] before:absolute before:-inset-2"
                     >
                       ✕
                     </button>
@@ -208,6 +211,8 @@ export default function BasicTab({
                       <span className="text-[10px] shrink-0" style={{ color: "var(--text-muted)" }}>每年金額:</span>
                       <input
                         type="number"
+                        inputMode="numeric"
+                        aria-label={`事件 ${i + 1} 每年金額（正數為收入、負數為支出）`}
                         value={ev.amount}
                         onChange={(e) => {
                           const newEvents = [...(basicParams.customEvents || [])];
@@ -224,6 +229,7 @@ export default function BasicTab({
                     <div className="flex items-center gap-1 shrink-0">
                       <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>類型:</span>
                       <select
+                        aria-label={`事件 ${i + 1} 類型`}
                         value={ev.type || "one-time"}
                         onChange={(e) => {
                           const newEvents = [...(basicParams.customEvents || [])];
@@ -252,6 +258,7 @@ export default function BasicTab({
                           <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>持續:</span>
                           <input
                             type="number"
+                            aria-label={`事件 ${i + 1} 持續年數`}
                             value={ev.duration || 1}
                             onChange={(e) => {
                               const newEvents = [...(basicParams.customEvents || [])];

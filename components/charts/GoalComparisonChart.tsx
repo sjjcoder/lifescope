@@ -39,8 +39,11 @@ export default function GoalComparisonChart({
 
   if (!data || data.length === 0) return null;
 
+  const last = data[data.length - 1];
+  const summary = `目標回推對比：第 ${last.year} 年照目前步調可達 ${formatTWD(last.current)}，達成目標所需步調為 ${formatTWD(last.required)}，目標 ${formatTWD(targetAssets)}`;
+
   return (
-    <div className="h-[300px] w-full">
+    <div className="h-[300px] w-full" role="img" aria-label={summary}>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart
           data={formattedData}

@@ -38,8 +38,11 @@ export default function FanChart({ data }: { data: PercentileData[] }) {
 
   if (!data || data.length === 0) return null;
 
+  const last = data[data.length - 1];
+  const summary = `蒙地卡羅扇形圖：第 ${last.year} 年淨資產中位數 ${formatTWD(last.p50)}，最差 10% 為 ${formatTWD(last.p10)}，最佳 10% 為 ${formatTWD(last.p90)}`;
+
   return (
-    <div className="h-[350px] w-full">
+    <div className="h-[350px] w-full" role="img" aria-label={summary}>
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart
           data={formattedData}
@@ -70,7 +73,7 @@ export default function FanChart({ data }: { data: PercentileData[] }) {
               boxShadow: "var(--shadow-card)",
               color: "var(--text-primary)",
             }}
-            labelFormatter={(label) => `📉 退場第 ${label} 年`}
+            labelFormatter={(label) => `第 ${label} 年`}
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             formatter={(value: any, name: any, props: any) => {
               const key = props?.dataKey;
@@ -82,16 +85,17 @@ export default function FanChart({ data }: { data: PercentileData[] }) {
           
           <ReferenceLine y={0} stroke="#ef4444" strokeWidth={2} strokeDasharray="5 5" label={{ position: 'insideTopLeft', value: '破產警戒線', fill: '#ef4444', fontSize: 12 }} />
 
-          {/* Outer Fan P10-P90 */}
+          {/* Outer Fan P10-P90：用次要色與內圈區分，避免兩層同色只差透明度難以辨認 */}
           <Area
             type="monotone"
             dataKey="range90_10"
             name="極端狀況區 (P10-P90)"
-            stroke="var(--accent-primary)"
-            strokeOpacity={0.35}
+            stroke="var(--accent-secondary)"
+            strokeOpacity={0.5}
             strokeWidth={1}
-            fill="var(--accent-primary)"
-            fillOpacity={0.22}
+            strokeDasharray="4 3"
+            fill="var(--accent-secondary)"
+            fillOpacity={0.18}
           />
 
           {/* Inner Fan P25-P75 */}

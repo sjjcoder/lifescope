@@ -52,31 +52,33 @@ export default function MonteCarloTab({
         bgColorHex="rgba(245, 158, 11, 0.15)"
       />
 
-      <div className="flex gap-2 mb-5 p-1 rounded-xl" style={{ background: "var(--bg-secondary)" }}>
-        <button
-          className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] ${
-            mcParams.phase === "accumulation"
-              ? "bg-white text-slate-900 shadow-sm"
-              : "opacity-60 hover:opacity-100"
-          }`}
-          onClick={() => updateMC("phase", "accumulation")}
-        >
-          💪 財富累積期
-        </button>
-        <button
-          className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] ${
-            mcParams.phase === "decumulation"
-              ? "bg-white text-slate-900 shadow-sm"
-              : "opacity-60 hover:opacity-100"
-          }`}
-          onClick={() => updateMC("phase", "decumulation")}
-        >
-          🌴 退休提領期
-        </button>
+      <div role="group" aria-label="模擬階段" className="flex gap-2 mb-5 p-1 rounded-xl" style={{ background: "var(--bg-secondary)" }}>
+        {([
+          ["accumulation", "💪 財富累積期"],
+          ["decumulation", "🌴 退休提領期"],
+        ] as const).map(([phase, label]) => {
+          const active = mcParams.phase === phase;
+          return (
+            <button
+              key={phase}
+              type="button"
+              aria-pressed={active}
+              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all cursor-pointer border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] ${
+                active
+                  ? "bg-[var(--accent-primary-dim)] text-[var(--accent-primary)] border-[var(--border-accent)]"
+                  : "border-transparent opacity-70 hover:opacity-100"
+              }`}
+              style={active ? undefined : { color: "var(--text-secondary)" }}
+              onClick={() => updateMC("phase", phase)}
+            >
+              {label}
+            </button>
+          );
+        })}
       </div>
 
       <InfoBox colorHex="#94a3b8">
-        <p className="text-xs text-slate-400">
+        <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
           {mcParams.phase === "accumulation"
             ? "💡 模擬工作期間：每月持續投入月投資額，不會變賣資產。破產機率為 0。"
             : "⚠️ 模擬退休期間：停止工作投入，每月變賣資產支付月支出，測驗資產存活率。"}

@@ -24,14 +24,14 @@ export default function TermsOfServicePage() {
               <section>
                 <h2 className="text-lg font-semibold mb-2" style={{ color: "var(--text-primary)" }}>2. 免責聲明（重要）</h2>
                 <p className="leading-relaxed">
-                  本平台<strong>絕不提供任何特定金融商品之買賣建議、投資分析或推薦</strong>，亦不構成任何形式之投資顧問服務。所有運算結果不保證未來實際投資績效。投資市場具有風險，使用者應自行查證並承擔所有投資決策之最終結果與責任。
+                  本平台<strong>絕不提供任何特定金融商品之買賣建議、投資分析或推薦</strong>，亦不構成《證券投資信託及顧問法》所規範之任何形式投資顧問服務。所有運算結果均為基於使用者自行輸入之假設參數所做的數學模擬，不保證未來實際投資績效。投資市場具有風險，使用者應自行查證並承擔所有投資決策之最終結果與責任。
                 </p>
               </section>
 
               <section>
                 <h2 className="text-lg font-semibold mb-2" style={{ color: "var(--text-primary)" }}>3. 資料準確性</h2>
                 <p className="leading-relaxed">
-                  「租屋 vs 買房」與「複利試算」等模型均存在簡化之假設條件（如：固定通膨率、忽略不預期支出、未計入房屋交易摩擦成本等）。真實世界之財務狀況更為複雜，包含稅務變更、法規修改與突發事件，平台之結果無法涵蓋所有變數，請勿將本平台結果作為唯一決策依據。
+                  「複利試算」、「目標回推」、「蒙地卡羅壓測」與「租屋 vs 買房」等模型均存在簡化之假設條件（如：固定通膨率、以統計分佈近似市場報酬、忽略不預期支出、未計入房屋交易摩擦成本等），各分頁的「模型假設說明」有更詳細的描述。真實世界之財務狀況更為複雜，包含稅務變更、法規修改與突發事件，平台之結果無法涵蓋所有變數，請勿將本平台結果作為唯一決策依據。
                 </p>
               </section>
               
@@ -45,7 +45,7 @@ export default function TermsOfServicePage() {
             
             <div className="mt-8 pt-6 border-t border-dashed" style={{ borderColor: "var(--border-subtle)" }}>
               <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                最後更新日期：2026年4月
+                最後更新日期：2026年9月
               </p>
             </div>
           </div>

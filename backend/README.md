@@ -69,13 +69,31 @@ Numpy 是 C++ 底層寫的，不能直接把 Windows 下載的 Numpy 上傳到 A
 4. 程式碼會自動讀取此環境變數來控制 CORS，只允許來自你網站的請求。
 
 ### 8. 🔒 安全強化：設定 API Gateway 流量限速（防止帳單爆炸）
-1. 進入 **API Gateway Console** → 選取你的 API。
-2. 在左側選單點選 **Throttling** 或 **Usage Plans**。
-3. 設定限速：
+> HTTP API **沒有 Usage Plan**，帳戶預設是 10,000 rps / burst 5,000——必須在 **Stage 層級** 設定才會生效。
+1. 進入 **API Gateway Console** → 選取你的 API → 左側 **Stages** → 選 `$default`（或你的 stage）。
+2. 在 **Default route throttling** 點 **[Edit]**：
    - **Rate**: `5` requests/second（每秒最多處理 5 個請求）
    - **Burst**: `10` requests（允許短暫的 10 個併發突發）
-4. 點擊 **[Save]**。
-5. 超出限制的請求會自動回傳 `429 Too Many Requests`，不會產生 Lambda 費用。
+3. 點擊 **[Save]**。超出限制的請求會回傳 `429 Too Many Requests`，**不會**產生 Lambda 費用。
+4. CORS 只擇一處設定：程式碼已經回傳 CORS 標頭並讀取 `ALLOWED_ORIGIN`，因此 **API Gateway 的 CORS 設定請留空**（步驟 6 只在你不想用程式碼控制時才做），兩邊都設會讓瀏覽器收到重複的 `Access-Control-Allow-Origin` 而拒絕回應。
+
+### 9. 🔒 安全強化：Lambda Reserved concurrency（帳單硬上限）
+API Gateway 限速是第一道牆，Reserved concurrency 是**不可能被繞過**的第二道牆（就算有人拿到 URL 直接用腳本打也一樣）。
+1. Lambda → **Configuration** → **Concurrency** → **[Edit]**。
+2. 選 **Reserve concurrency**，填 `5`（一次模擬約 1 秒，5 個併發對個人網站已經很寬裕）。
+3. 點擊 **[Save]**。
+4. 建議同時到 **AWS Budgets** 設一個每月 US$10 的費用警報。
+
+### 10. 🔁 程式碼更新時的重新部署
+`lambda_function.py` 有改動時（例如這次的輸入驗證強化、對數常態報酬、逐月現金流），重複步驟 3：把整個檔案貼上覆蓋 → **[Deploy]**。前端與 Lambda 是向下相容的：舊 Lambda 會忽略新的 `monthlyInsurance` 欄位，新 Lambda 也接受舊 payload。
+
+### 引擎行為摘要（2026-09 版）
+- 每年抽一個年報酬（**對數常態**，期望值 = 年化報酬率、標準差 = 波動率，因此單年不會跌破 -100%），換成月利率後**逐月**結算投入、支出、保費與貸款本息——與前端複利試算的複利慣例一致。
+- 貸款逐月攤還，只在還有欠款時扣款；續借時重設欠款並重新攤還。
+- 提領從第 1 年起就依通膨調整，並乘上人生階段的家庭開支乘數（階段會先依 `endYear` 排序）。
+- 黑天鵝事件若落在模擬期之外會被**忽略**（不再夾到最後一年）。
+- 破產定義：投資帳戶在任一年底歸零；回傳的百分位與中位數是**淨資產**（扣除未償貸款）。
+- 輸入防護：body 上限 16 KB、拒絕 `NaN`/`Infinity`、所有數值夾在合理範圍、非物件 body 回 400、`ALLOWED_ORIGIN` 設定後會拒絕帶了其他 Origin 的請求（403）。
 
 ## 🎯 完工！
 回到你的 Lambda 介面或者 API Gateway 看，你會得到一串類似 `https://xxxxxxx.execute-api.ap-northeast-1.amazonaws.com/default/lifescope-monte-carlo` 的 API endpoint URL。
@@ -98,13 +116,14 @@ Numpy 是 C++ 底層寫的，不能直接把 Windows 下載的 Numpy 上傳到 A
 | `initialAssets` | float | `10000000` | 初始淨資產 (元) | `[0, 10,000,000,000]` |
 | `monthlyContribution` | float | `10000` | 每月持續投入金額 (元) | `[0, 10,000,000]` |
 | `monthlyWithdrawal` | float | `50000` | 每月提領金額 (元) | `[0, 10,000,000]` |
+| `monthlyInsurance` | float | `0` | 每月保費等固定支出 (元)，逐月從帳戶扣除 | `[0, 1,000,000]` |
 | `years` | int | `40` | 模擬年數 | `[1, 100]` |
 | `expectedReturn` | float | `7.0` | 預期年化報酬率 (%) | `[-50.0, 100.0]` |
 | `volatility` | float | `15.0` | 預估市場年化波動率 (%) | `[0.0, 100.0]` |
 | `inflationMean` | float | `2.0` | 預估年化通膨率 (%) | `[0.0, 50.0]` |
 | `salaryGrowthRate` | float | `0.0` | 每年調薪幅度 (%) | `[0.0, 20.0]` |
-| `leverageAmount` | float | `0.0` | 借貸本金 (元) | `[0.0, 無上限]` |
-| `leverageRate` | float | `0.0` | 貸款年化利率 (%) | `[0.0, 100.0]` |
+| `leverageAmount` | float | `0.0` | 借貸本金 (元)；`leverageYears` 為 0 時視為 0 | `[0.0, 10,000,000,000]` |
+| `leverageRate` | float | `0.0` | 貸款年化利率 (%)（名目利率，月利率 = ÷12） | `[0.0, 100.0]` |
 | `leverageYears` | int | `0` | 貸款年限 | `[0, 100]` |
 | `leverageRecurYears` | int | `0` | 自動定期續借頻率 (年)，0 為不續借 | `[0, 100]` |
 | `jumpProbability` | float | `0.0` | 隨機跳躍擴散年崩盤機率 (%) | `[0.0, 100.0]` |
@@ -114,7 +133,7 @@ Numpy 是 C++ 底層寫的，不能直接把 Windows 下載的 Numpy 上傳到 A
 | `lifeStages` | array | `[]` | 人生不同階段設定列表 (上限 10 筆) | 內含 `{ endYear, familySize }` |
 | `blackSwanEvents` | array | `[]` | 歷史黑天鵝重大崩盤年份設定 (上限 20 筆) | 內含 `{ year, drop }` |
 
-*注：所有輸入數值皆會在 Lambda 端進行 strict clamp 範圍校驗以確保伺服器穩定。*
+*注：所有輸入數值皆會在 Lambda 端進行 strict clamp 範圍校驗；非數字、`NaN`/`Infinity`、非物件 body 回 `400`，body 超過 16 KB 回 `413`，Origin 不符 `ALLOWED_ORIGIN` 回 `403`。*
 
 #### `lifeStages` 格式範例：
 ```json

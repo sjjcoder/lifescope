@@ -17,14 +17,29 @@ const STORAGE_KEY = 'lifescope_scenarios';
 const MAX_FREE_SCENARIOS = 3;
 
 function generateId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+// localStorage 內容可能被其他分頁、瀏覽器擴充或手動編輯弄壞；載入時只保留形狀正確的劇本，
+// 避免 handleLoad 展開 `scenario.params` 時因為 undefined 而讓整頁崩潰。
+function isScenario(value: unknown): value is Scenario {
+  if (!value || typeof value !== 'object') return false;
+  const s = value as Record<string, unknown>;
+  return (
+    typeof s.id === 'string' &&
+    typeof s.name === 'string' &&
+    !!s.params &&
+    typeof s.params === 'object' &&
+    !Array.isArray(s.params)
+  );
 }
 
 export function getScenarios(): Scenario[] {
   if (typeof window === 'undefined') return [];
   try {
     const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
+    const parsed: unknown = data ? JSON.parse(data) : [];
+    return Array.isArray(parsed) ? parsed.filter(isScenario) : [];
   } catch {
     return [];
   }

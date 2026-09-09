@@ -98,7 +98,7 @@ export default function HousingTab({
         max={5}
         step={0.1}
         unit="%"
-        hint="目前首購房貸地板價約 2.185 起"
+        hint="首購房貸地板價約 2.185% 起（2026 年，會隨央行利率變動）"
       />
       <SliderInput
         id="loanYears"

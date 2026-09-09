@@ -16,7 +16,6 @@ import {
   calculateHousingCompare,
   calculateFIREAge,
   formatTWD,
-  formatNumber,
   calculateMonthlyMortgage,
   calculateMonthlyLoanPayment,
   MCParams,
@@ -50,6 +49,23 @@ const ETF_PRESETS = [
 ];
 
 const STAGE_LABELS = ["🧒 年輕養成期", "👨‍👩‍👧 家庭壯年期", "🧓 退休空巢期"];
+
+type TabId = "basic" | "goal" | "mc" | "housing";
+const TAB_ORDER: TabId[] = ["basic", "goal", "mc", "housing"];
+
+// 蒙地卡羅 API 回應先驗證形狀再進 state：API Gateway 錯誤頁、後端改版或代理快取回傳 200 但內容不對時，
+// 不會在 render 期間 TypeError 白屏。
+function isMCResult(value: unknown): value is MCResult {
+  if (!value || typeof value !== "object") return false;
+  const r = value as Record<string, unknown>;
+  if (typeof r.successRate !== "number" || typeof r.medianEndingWealth !== "number") return false;
+  if (!Array.isArray(r.percentilePaths) || r.percentilePaths.length === 0) return false;
+  return r.percentilePaths.every((p) => {
+    if (!p || typeof p !== "object") return false;
+    const point = p as Record<string, unknown>;
+    return ["year", "p90", "p75", "p50", "p25", "p10"].every((k) => Number.isFinite(point[k]));
+  });
+}
 const FAMILY_OPTIONS = [
   { value: 1, label: "👤 單身 (1人)" },
   { value: 2, label: "👥 兩人世界" },
@@ -62,11 +78,25 @@ const FAMILY_OPTIONS = [
 
 function SimulatorContent() {
   const searchParams = useSearchParams();
-  const tabFromParam = (v: string | null): "basic" | "housing" | "mc" | "goal" =>
+  const tabFromParam = (v: string | null): TabId =>
     v === "housing" || v === "mc" || v === "goal" ? v : "basic";
   const initialTab = tabFromParam(searchParams.get("tab"));
 
-  const [activeTab, setActiveTab] = useState<"basic" | "housing" | "mc" | "goal">(initialTab);
+  const [activeTab, setActiveTab] = useState<TabId>(initialTab);
+
+  // 分頁列的方向鍵導覽（WAI-ARIA tabs pattern）
+  const onTabKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const idx = TAB_ORDER.indexOf(activeTab);
+    let next: number | null = null;
+    if (e.key === "ArrowRight") next = (idx + 1) % TAB_ORDER.length;
+    else if (e.key === "ArrowLeft") next = (idx - 1 + TAB_ORDER.length) % TAB_ORDER.length;
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = TAB_ORDER.length - 1;
+    if (next === null) return;
+    e.preventDefault();
+    setActiveTab(TAB_ORDER[next]);
+    document.getElementById(`tab-${TAB_ORDER[next]}`)?.focus();
+  };
 
   useEffect(() => {
     setActiveTab(tabFromParam(searchParams.get("tab")));
@@ -135,7 +165,7 @@ function SimulatorContent() {
     volatility: 15,
     isScenarioEnabled: false,
     scenarioId: "custom",
-    blackSwanYear: 0,
+    blackSwanYear: 5, // 滑桿最小值是 1；若為 0 會讓劇本靜默不生效
     blackSwanDrop: 30,
     isJumpEnabled: false,
     jumpProbability: 5,
@@ -146,6 +176,10 @@ function SimulatorContent() {
   const [mcResult, setMcResult] = useState<MCResult | null>(null);
   const [isLoadingMC, setIsLoadingMC] = useState(false);
   const [mcError, setMcError] = useState("");
+  // 記住上次成功模擬時的輸入快照；任何會影響結果的參數一變動就與快照不同 → 結果過期，結果區顯示重新執行提示
+  const [mcResultInputsKey, setMcResultInputsKey] = useState<string | null>(null);
+  const mcInputsKey = JSON.stringify({ mcParams, basicParams, lifeStages, isLeverageEnabled });
+  const isMcStale = mcResult !== null && mcResultInputsKey !== mcInputsKey;
 
   const updateMC = useCallback(<K extends keyof MCParams>(key: K, val: MCParams[K]) => {
     setMcParams((p) => ({ ...p, [key]: val }));
@@ -164,14 +198,25 @@ function SimulatorContent() {
         scenarioEvents = activeScenario?.id === "custom"
           ? (startYear > 0 ? [{ year: startYear, drop: mcParams.blackSwanDrop }] : [])
           : (startYear > 0 ? (activeScenario?.events.map(ev => ({ year: startYear + ev.year, drop: ev.drop })) || []) : []);
+        // 落在模擬期之外的事件直接丟掉，避免被後端夾到最後一年憑空製造崩盤
+        scenarioEvents = scenarioEvents.filter(ev => ev.year >= 1 && ev.year <= basicParams.investmentYears);
       }
+
+      // 與複利試算同一套假設：理專模式下報酬率扣摩擦損耗、保費逐月扣款
+      const frictionAdjustedReturn = basicParams.isBankerEnabled
+        ? Math.max(0, basicParams.annualReturn - (basicParams.frictionRate ?? 0))
+        : basicParams.annualReturn;
+      const monthlyInsurance = basicParams.isBankerEnabled && basicParams.isInsuranceEnabled
+        ? (basicParams.insurancePremium ?? 0)
+        : 0;
 
       const payload = {
         initialAssets: basicParams.currentAssets,
         monthlyContribution: mcParams.phase === "accumulation" ? basicParams.monthlyInvestment : 0,
         monthlyWithdrawal: mcParams.phase === "decumulation" ? basicParams.monthlyExpense : 0,
+        monthlyInsurance,
         years: basicParams.investmentYears,
-        expectedReturn: basicParams.annualReturn,
+        expectedReturn: frictionAdjustedReturn,
         volatility: mcParams.volatility,
         inflationMean: basicParams.inflationRate,
         blackSwanEvents: scenarioEvents,
@@ -198,8 +243,10 @@ function SimulatorContent() {
         body: JSON.stringify(payload)
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data: unknown = await res.json();
+      if (!isMCResult(data)) throw new Error("Unexpected response shape");
       setMcResult(data);
+      setMcResultInputsKey(mcInputsKey);
     } catch {
       setMcError("模擬失敗，請稍後再試或檢查網路連線。");
     } finally {
@@ -216,7 +263,7 @@ function SimulatorContent() {
   }, []);
 
   // Compute results
-  const projectionData = useMemo(() => calculateProjection(basicParams, lifeStages), [basicParams, lifeStages]);
+  const projectionData = useMemo(() => calculateProjection(basicParams), [basicParams]);
   const housingData = useMemo(() => calculateHousingCompare(housingParams), [housingParams]);
   const fireYears = useMemo(() => calculateFIREAge(basicParams, lifeStages), [basicParams, lifeStages]);
 
@@ -229,6 +276,15 @@ function SimulatorContent() {
     const loanAmount = housingParams.housePrice - downPayment;
     return Math.round(calculateMonthlyMortgage(loanAmount, housingParams.loanRate, housingParams.loanYears));
   }, [housingParams.housePrice, housingParams.downPaymentPercent, housingParams.loanRate, housingParams.loanYears]);
+
+  // 有寬限期時，StatCard 顯示寬限期後的本息攤還（與左側試算卡一致）
+  const displayMortgage = useMemo(() => {
+    const graceYears = housingParams.graceYears ?? 0;
+    if (graceYears <= 0) return computedMortgage;
+    const loanAmount = housingParams.housePrice * (1 - housingParams.downPaymentPercent / 100);
+    const remainingYears = Math.max(1, housingParams.loanYears - graceYears);
+    return Math.round(calculateMonthlyMortgage(loanAmount, housingParams.loanRate, remainingYears));
+  }, [computedMortgage, housingParams.graceYears, housingParams.housePrice, housingParams.downPaymentPercent, housingParams.loanRate, housingParams.loanYears]);
 
   const finalAssets = projectionData[projectionData.length - 1]?.assets || 0;
   const finalPortfolio = projectionData[projectionData.length - 1]?.portfolioValue || 0;
@@ -246,7 +302,7 @@ function SimulatorContent() {
       return;
     }
     if (!canSaveMore()) {
-      setSaveMessage("免費版最多存 3 組劇本");
+      setSaveMessage("最多可存 3 組劇本，請先刪除一組再存檔");
       return;
     }
     const result = saveScenario({
@@ -284,9 +340,10 @@ function SimulatorContent() {
         ...scenario.mcParams,
         isJumpEnabled: scenario.mcParams?.isJumpEnabled || false,
         isScenarioEnabled: scenario.mcParams?.isScenarioEnabled || false,
+        blackSwanYear: Math.max(1, scenario.mcParams?.blackSwanYear || 1), // 舊劇本可能存了 0
       }));
     }
-    if (scenario.lifeStages) {
+    if (Array.isArray(scenario.lifeStages) && scenario.lifeStages.length === 3) {
       setLifeStages(scenario.lifeStages);
     }
     setIsLeverageEnabled((scenario.params.leverageAmount || 0) > 0);
@@ -323,24 +380,37 @@ function SimulatorContent() {
               財務<span style={{ color: "var(--accent-primary)" }}>沙盤推演</span>
             </h1>
             <p className="text-base" style={{ color: "var(--text-secondary)" }}>
-              拖動滑桿即時看到你的財務未來走向。複利試算與租屋 vs 買房完全在你的瀏覽器中完成、資料不會上傳；蒙地卡羅壓測因運算量大，會將你設定的參數傳送到雲端進行 1,000 次模擬。
+              拖動滑桿即時看到你的財務未來走向。複利試算、目標回推與租屋 vs 買房完全在你的瀏覽器中完成、資料不會上傳；蒙地卡羅壓測因運算量大，會將你設定的參數傳送到雲端進行 1,000 次模擬。
             </p>
           </div>
 
           {/* Tabs — kept above any content that changes size per tab, so the nav row itself never jumps when switching */}
-          <div className="flex gap-2 mb-6 p-1 rounded-xl w-fit no-print" style={{ background: "var(--bg-secondary)" }}>
-            <button id="tab-basic" className={`tab-button ${activeTab === "basic" ? "active" : ""}`} onClick={() => setActiveTab("basic")}>
-              📈 複利試算
-            </button>
-            <button id="tab-goal" className={`tab-button ${activeTab === "goal" ? "active" : ""}`} onClick={() => setActiveTab("goal")}>
-              🎯 目標回推
-            </button>
-            <button id="tab-mc" className={`tab-button ${activeTab === "mc" ? "active" : ""}`} onClick={() => setActiveTab("mc")}>
-              🎲 蒙地卡羅壓測
-            </button>
-            <button id="tab-housing" className={`tab-button ${activeTab === "housing" ? "active" : ""}`} onClick={() => setActiveTab("housing")}>
-              🏠 租屋 vs 買房
-            </button>
+          <div
+            role="tablist"
+            aria-label="分析模式"
+            onKeyDown={onTabKeyDown}
+            className="flex gap-2 mb-6 p-1 rounded-xl w-fit max-w-full overflow-x-auto no-print"
+            style={{ background: "var(--bg-secondary)" }}
+          >
+            {([
+              ["basic", "📈 複利試算"],
+              ["goal", "🎯 目標回推"],
+              ["mc", "🎲 蒙地卡羅壓測"],
+              ["housing", "🏠 租屋 vs 買房"],
+            ] as [TabId, string][]).map(([id, label]) => (
+              <button
+                key={id}
+                id={`tab-${id}`}
+                role="tab"
+                aria-selected={activeTab === id}
+                aria-controls={`panel-${id}`}
+                tabIndex={activeTab === id ? 0 : -1}
+                className={`tab-button shrink-0 whitespace-nowrap ${activeTab === id ? "active" : ""}`}
+                onClick={() => setActiveTab(id)}
+              >
+                {label}
+              </button>
+            ))}
           </div>
 
           {/* === Global Config Band (basic/mc/goal only — housing uses its own independent params) === */}
@@ -359,7 +429,7 @@ function SimulatorContent() {
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span className="text-xs font-medium mr-1" style={{ color: "var(--text-secondary)" }}>快速套用市場假設：</span>
                   {ETF_PRESETS.map((preset) => {
-                    const isSelected = basicParams.annualReturn === preset.return;
+                    const isSelected = basicParams.annualReturn === preset.return && mcParams.volatility === preset.vol;
                     return (
                     <button
                       key={preset.name}
@@ -395,7 +465,8 @@ function SimulatorContent() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* ===== Left Panel: Tab-Specific Controls ===== */}
             <div className="lg:col-span-4">
-              <div className="glass-card p-6 sticky top-20">
+              {/* 短視窗時面板可自行捲動，避免 sticky 把底部滑桿卡在畫面外 */}
+              <div className="glass-card p-6 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
                 {activeTab === "basic" && (
                   <BasicTab
                     basicParams={basicParams}
@@ -454,7 +525,7 @@ function SimulatorContent() {
             </div>
 
             {/* ===== Right Panel: Results ===== */}
-            <div className="lg:col-span-8 space-y-6">
+            <div className="lg:col-span-8 space-y-6" role="tabpanel" id={`panel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
 
               {/* === Life Path Panel (basic + mc only) === */}
               {(activeTab === "basic" || activeTab === "mc") && (
@@ -472,6 +543,7 @@ function SimulatorContent() {
                           <span className="text-xs shrink-0" style={{ color: "var(--text-muted)" }}>至第</span>
                           <input
                             type="number"
+                            aria-label={`${STAGE_LABELS[i]} 持續到第幾年`}
                             value={stage.endYear}
                             onChange={(e) => { const v = [...lifeStages]; v[i] = {...v[i], endYear: Math.max(1, Math.min(50, Number(e.target.value)))}; setLifeStages(v); }}
                             className="input-field !w-20 !py-1 !px-2 text-sm text-center"
@@ -480,6 +552,7 @@ function SimulatorContent() {
                           <span className="text-xs shrink-0" style={{ color: "var(--text-muted)" }}>年</span>
                         </div>
                         <select
+                          aria-label={`${STAGE_LABELS[i]} 家庭規模`}
                           value={stage.familySize}
                           onChange={(e) => { const v = [...lifeStages]; v[i] = {...v[i], familySize: Number(e.target.value)}; setLifeStages(v); }}
                           className="w-full p-2 rounded-lg border text-sm"
@@ -513,7 +586,7 @@ function SimulatorContent() {
                       color="#3b82f6" 
                     />
                     <StatCard label="投資報酬" value={formatTWD(totalReturns)} sub={`報酬率 ${totalInvested > 0 ? ((totalReturns / totalInvested) * 100).toFixed(0) : 0}%`} color="var(--accent-success)" />
-                    <StatCard label="月被動收入" value={formatTWD(monthlyPassiveIncome)} sub="4% 法則估算" color="var(--accent-secondary)" />
+                    <StatCard label="月被動收入" value={formatTWD(monthlyPassiveIncome)} sub="最終名目淨資產 × 4% ÷ 12" color="var(--accent-secondary)" />
                   </div>
 
                   {fireYears !== null ? (
@@ -563,7 +636,7 @@ function SimulatorContent() {
                     <StatCard label="租屋淨資產" value={formatTWD(housingFinal?.rentNetWorth || 0)} sub={`${housingParams.yearsToCompare} 年後`} color={housingDiff > 0 ? "var(--accent-primary)" : "var(--text-secondary)"} />
                     <StatCard label="買房淨資產" value={formatTWD(housingFinal?.buyNetWorth || 0)} sub={`${housingParams.yearsToCompare} 年後`} color={housingDiff <= 0 ? "var(--accent-primary)" : "var(--text-secondary)"} />
                     <StatCard label="差額" value={`${housingDiff > 0 ? "租屋勝" : "買房勝"} ${formatTWD(Math.abs(housingDiff))}`} color={housingDiff > 0 ? "var(--accent-success)" : "var(--accent-secondary)"} />
-                    <StatCard label="月房貸" value={formatTWD(housingParams.housePrice * (1 - housingParams.downPaymentPercent / 100) * (housingParams.loanRate / 100 / 12) * Math.pow(1 + housingParams.loanRate / 100 / 12, housingParams.loanYears * 12) / (Math.pow(1 + housingParams.loanRate / 100 / 12, housingParams.loanYears * 12) - 1))} sub={`vs 月租 ${formatTWD(housingParams.monthlyRent)}`} />
+                    <StatCard label={(housingParams.graceYears ?? 0) > 0 ? "月房貸 (寬限期後)" : "月房貸"} value={formatTWD(displayMortgage)} sub={`vs 月租 ${formatTWD(housingParams.monthlyRent)}`} />
                   </div>
                   <div className="glass-card p-5">
                     <h3 className="font-semibold text-base mb-4" style={{ color: "var(--text-secondary)" }}>淨資產對比曲線</h3>
@@ -598,13 +671,30 @@ function SimulatorContent() {
                         {isLoadingMC ? "模擬中…" : "🚀 立即開始模擬"}
                       </button>
                       {mcError && (
-                        <div className="mt-4 px-4 py-2.5 rounded-lg text-sm" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171" }}>
+                        <div role="alert" className="mt-4 px-4 py-2.5 rounded-lg text-sm" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171" }}>
                           ⚠️ {mcError}
                         </div>
                       )}
                     </div>
                   ) : (
                     <div className="space-y-6">
+                      {isMcStale && (
+                        <div role="status" className="px-4 py-2.5 rounded-lg text-sm flex flex-wrap items-center justify-between gap-3" style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.3)", color: "#fbbf24" }}>
+                          <span>⚠️ 參數已變更，以下結果是用舊參數算出來的。</span>
+                          <button
+                            onClick={runMonteCarlo}
+                            disabled={isLoadingMC}
+                            className="shrink-0 font-semibold underline underline-offset-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 rounded"
+                          >
+                            {isLoadingMC ? "重新模擬中…" : "重新執行模擬"}
+                          </button>
+                        </div>
+                      )}
+                      {mcError && (
+                        <div role="alert" className="px-4 py-2.5 rounded-lg text-sm" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171" }}>
+                          ⚠️ {mcError}
+                        </div>
+                      )}
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div className="glass-card p-5 relative overflow-hidden flex flex-col justify-center">
                           <div className={`absolute top-0 right-0 w-24 h-24 blur-3xl opacity-20 ${mcResult.successRate > 90 ? 'bg-green-500' : mcResult.successRate > 70 ? 'bg-yellow-500' : 'bg-red-500'}`} />
@@ -612,7 +702,9 @@ function SimulatorContent() {
                           <p className="text-4xl font-bold" style={{ color: mcResult.successRate > 90 ? 'var(--accent-success)' : mcResult.successRate > 70 ? '#f59e0b' : '#ef4444' }}>
                             {mcResult.successRate}%
                           </p>
-                          <p className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>1,000 次模擬中未破產機率</p>
+                          <p className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>
+                            {mcResult.successRate > 90 ? "安全" : mcResult.successRate > 70 ? "需留意" : "高風險"} · 1,000 次模擬中未破產機率
+                          </p>
                         </div>
                         <div className="glass-card p-5 flex flex-col justify-center">
                           <p className="text-sm font-medium mb-1" style={{ color: "var(--text-secondary)" }}>中位數淨資產 (P50)</p>
@@ -631,6 +723,17 @@ function SimulatorContent() {
                         <h3 className="font-semibold text-base mb-4" style={{ color: "var(--text-secondary)" }}>1,000 次平行宇宙扇形軌跡 (Fan Chart)</h3>
                         <FanChart data={mcResult.percentilePaths} />
                       </div>
+                      <div className="glass-card p-5">
+                        <h3 className="font-semibold text-sm mb-3" style={{ color: "var(--text-secondary)" }}>📋 模型假設說明</h3>
+                        <ul className="space-y-1.5 text-xs" style={{ color: "var(--text-muted)" }}>
+                          <li>• 每次執行固定模擬 1,000 條路徑：每年抽一個年報酬（對數常態分佈，期望值 = 年化報酬率、標準差 = 波動率），再換成月利率逐月結算投入、支出與貸款本息。</li>
+                          <li>• <b>破產定義</b>：投資帳戶在任一年底歸零、無法再支付支出或貸款。成功率 = 未破產路徑的比例；財富累積期若每月投入大於支出，破產機率必為 0。</li>
+                          <li>• 圖表與中位數顯示的是<b>名目淨資產</b>（已扣除尚未還清的貸款，未折算通膨），與複利試算的「真實淨資產」基準不同。</li>
+                          <li>• 退休提領金額每年依通膨率成長並乘上人生路徑的家庭開支乘數；每月投入依年調薪幅度成長。</li>
+                          <li>• 歷史災難劇本會讓該年所有路徑同步下跌指定幅度；跳躍擴散則是每年以設定機率額外承受一次崩盤；動態提領在前一年報酬為負時按比例縮減當年生活費。</li>
+                          <li>• 理專模式的摩擦損耗會從年化報酬率扣除、保費逐月扣款；<b>未納入</b>人生重大事件。</li>
+                        </ul>
+                      </div>
                     </div>
                   )}
                 </>
@@ -639,6 +742,7 @@ function SimulatorContent() {
                   currentAssets={basicParams.currentAssets}
                   currentReturn={basicParams.annualReturn}
                   currentInvestment={basicParams.monthlyInvestment}
+                  salaryGrowthRate={basicParams.salaryGrowthRate}
                   targetAssets={targetAssets}
                   targetYears={targetYears}
                 />

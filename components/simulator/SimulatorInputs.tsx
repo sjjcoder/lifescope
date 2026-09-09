@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState } from "react";
 
 // 格式化完整數字（帶千分位）。decimals > 0 時保留該位數的小數（供 step 為小數的欄位，如摩擦損耗 0.1% 使用）。
 export function formatNumber(num: number, decimals: number = 0): string {
@@ -52,14 +52,17 @@ function FormattedNumberInput({
   ariaLabel?: string;
 }) {
   const [text, setText] = useState(formatNumber(value, decimals));
-  const editingRef = useRef(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [prevValue, setPrevValue] = useState(value);
 
-  useEffect(() => {
-    if (!editingRef.current) setText(formatNumber(value, decimals));
-  }, [value, decimals]);
+  // 外部值變動（滑桿、載入劇本）時同步顯示文字；使用者正在打字時不要覆蓋
+  if (value !== prevValue) {
+    setPrevValue(value);
+    if (!isEditing) setText(formatNumber(value, decimals));
+  }
 
   const commit = () => {
-    editingRef.current = false;
+    setIsEditing(false);
     let n = parseFormattedNumber(text);
     if (decimals > 0) n = roundToDecimals(n, decimals);
     if (min !== undefined && n < min) n = min;
@@ -75,7 +78,7 @@ function FormattedNumberInput({
       aria-label={ariaLabel}
       value={text}
       onFocus={() => {
-        editingRef.current = true;
+        setIsEditing(true);
         setText(String(parseFormattedNumber(text)));
       }}
       onChange={(e) => setText(e.target.value)}
@@ -125,47 +128,28 @@ export function SliderInput({
 }) {
   const [localValue, setLocalValue] = useState(value);
   const [currentMax, setCurrentMax] = useState(max);
+  const [prevValue, setPrevValue] = useState(value);
+  const [prevMax, setPrevMax] = useState(max);
   const decimals = getDecimalPlaces(step);
 
-  // 當外部傳入的值變動時（例如載入劇本），同步更新局部狀態與最大值上限
-  useEffect(() => {
+  // 外部 props 變動（例如載入劇本、其他頁籤改了同一個值）時同步局部狀態。
+  // 用「記住上一次 props」在 render 期間調整，而不是 useEffect，避免多一輪 render 與畫面閃動。
+  if (value !== prevValue) {
+    setPrevValue(value);
     setLocalValue(value);
-    if (value > currentMax) {
-      setCurrentMax(Math.ceil(value * 1.5));
-    }
-  }, [value]);
-
-  // 同步外部的最大值上限變動
-  useEffect(() => {
-    if (max > currentMax || (max !== currentMax && value <= max)) {
-      setCurrentMax(max);
-    }
-  }, [max]);
+    if (value > currentMax) setCurrentMax(Math.ceil(value * 1.5));
+  }
+  if (max !== prevMax) {
+    setPrevMax(max);
+    if (max > currentMax || (max !== currentMax && value <= max)) setCurrentMax(max);
+  }
 
   const handleRangeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLocalValue(Number(e.target.value));
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = Number(e.target.value);
-    setLocalValue(val);
-    if (val > currentMax) {
-      setCurrentMax(Math.ceil(val * 1.5));
-    }
-  };
-
   const handleRangeCommit = () => {
     onChange(localValue);
-  };
-
-  const handleInputBlur = () => {
-    let finalVal = localValue;
-    if (finalVal < min) finalVal = min;
-    if (finalVal > currentMax) {
-      setCurrentMax(Math.ceil(finalVal * 1.5));
-    }
-    setLocalValue(finalVal);
-    onChange(finalVal);
   };
 
   const handleIncrement = () => {
@@ -231,6 +215,8 @@ export function SliderInput({
         onChange={handleRangeChange}
         onMouseUp={handleRangeCommit}
         onTouchEnd={handleRangeCommit}
+        onKeyUp={handleRangeCommit}
+        onBlur={handleRangeCommit}
         min={min}
         max={currentMax}
         step={step}
@@ -269,6 +255,7 @@ export function CompactInput({
           ariaLabel={label}
           min={min}
           max={max}
+          decimals={getDecimalPlaces(step)}
           className="input-field !py-1.5 !px-2 text-sm number-display flex-1 text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]"
         />
         <span className="text-xs shrink-0 w-4" style={{ color: "var(--text-secondary)" }}>{unit}</span>

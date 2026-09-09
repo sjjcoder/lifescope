@@ -25,8 +25,11 @@ export default function CompareChart({ data, loanYears, yearsToCompare }: { data
 
   if (!data || data.length === 0) return null;
 
+  const last = data[data.length - 1];
+  const summary = `租屋 vs 買房淨資產對比：第 ${last.year} 年租屋淨資產 ${formatTWD(last.rentNetWorth)}，買房淨資產 ${formatTWD(last.buyNetWorth)}`;
+
   return (
-    <div className="h-[300px] w-full">
+    <div className="h-[300px] w-full" role="img" aria-label={summary}>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart
           data={formattedData}

@@ -12,7 +12,7 @@ export const SITE = {
   url: "https://lifescope-three.vercel.app",
   title: "LifeScope — 人生財務沙盤推演平台",
   description:
-    "台灣唯一的蒙地卡羅退休模擬器。用 1,000 次平行宇宙測試你的財務計畫成功率,壓力測試你的現金流極限。免費、免註冊、手機可用。",
+    "免費開源的台灣蒙地卡羅退休模擬器。用 1,000 次平行宇宙測試你的財務計畫成功率,壓力測試你的現金流極限。免註冊、手機可用、不提供投資建議。",
   locale: "zh_TW",
 
   github: {

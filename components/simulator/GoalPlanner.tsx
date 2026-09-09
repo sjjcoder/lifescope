@@ -6,7 +6,7 @@ import {
   calculateRequiredMonthlyInvestment,
   calculateRequiredReturn,
   calculateRequiredYears,
-  formatTWD,
+  projectGoalFutureValue,
 } from "@/lib/calculator";
 import GoalComparisonChart, { GoalTrajectoryPoint } from "@/components/charts/GoalComparisonChart";
 import { SectionHeader, SliderInput, InfoBox, formatNumber } from "./SimulatorInputs";
@@ -85,7 +85,7 @@ export function GoalPlannerInputs({
 }: GoalPlannerInputsProps) {
   return (
     <>
-      <SectionHeader icon="🎯" title="設定回推目標" colorHex="var(--accent-secondary)" bgColorHex="var(--accent-primary-dim)" />
+      <SectionHeader icon="🎯" title="設定回推目標" colorHex="var(--accent-secondary)" bgColorHex="var(--accent-secondary-dim)" />
       <SliderInput
         id="goalMonthlyInvestment"
         label="月投資額"
@@ -127,7 +127,7 @@ export function GoalPlannerInputs({
       <PresetChips presets={TARGET_YEARS_PRESETS} activeValue={targetYears} onSelect={setTargetYears} />
 
       <p className="text-[11px] mt-4 opacity-60 leading-relaxed" style={{ color: "var(--text-muted)" }}>
-        💡 現有資產、年化報酬率沿用上方「全局基礎參數」。
+        💡 現有資產、年化報酬率與年調薪幅度沿用上方「全局基礎參數」；此分頁不計入槓桿、保費與人生事件。
       </p>
     </>
   );
@@ -137,6 +137,7 @@ interface GoalPlannerResultsProps extends Pick<GoalTargets, "targetAssets" | "ta
   currentAssets: number;
   currentReturn: number;
   currentInvestment: number;
+  salaryGrowthRate: number;
 }
 
 // 右側結果面板：三種回推槓桿 + 目前步調 vs 所需步調 對比曲線
@@ -144,50 +145,48 @@ export function GoalPlannerResults({
   currentAssets,
   currentReturn,
   currentInvestment,
+  salaryGrowthRate,
   targetAssets,
   targetYears,
 }: GoalPlannerResultsProps) {
   const requiredMonthly = useMemo(
-    () => calculateRequiredMonthlyInvestment(targetAssets, targetYears, currentReturn, currentAssets),
-    [targetAssets, targetYears, currentReturn, currentAssets]
+    () => calculateRequiredMonthlyInvestment(targetAssets, targetYears, currentReturn, currentAssets, salaryGrowthRate),
+    [targetAssets, targetYears, currentReturn, currentAssets, salaryGrowthRate]
   );
 
   const requiredReturn = useMemo(
-    () => calculateRequiredReturn(targetAssets, targetYears, currentInvestment, currentAssets),
-    [targetAssets, targetYears, currentInvestment, currentAssets]
+    () => calculateRequiredReturn(targetAssets, targetYears, currentInvestment, currentAssets, salaryGrowthRate),
+    [targetAssets, targetYears, currentInvestment, currentAssets, salaryGrowthRate]
   );
 
   const requiredYears = useMemo(
-    () => calculateRequiredYears(targetAssets, currentInvestment, currentReturn, currentAssets),
-    [targetAssets, currentInvestment, currentReturn, currentAssets]
+    () => calculateRequiredYears(targetAssets, currentInvestment, currentReturn, currentAssets, salaryGrowthRate),
+    [targetAssets, currentInvestment, currentReturn, currentAssets, salaryGrowthRate]
   );
 
   const trajectory: GoalTrajectoryPoint[] = useMemo(() => {
-    const r = currentReturn / 100 / 12;
-    const fv = (monthly: number, months: number) =>
-      r === 0
-        ? currentAssets + monthly * months
-        : currentAssets * Math.pow(1 + r, months) + monthly * ((Math.pow(1 + r, months) - 1) / r);
-
     const points: GoalTrajectoryPoint[] = [];
     for (let year = 0; year <= targetYears; year++) {
       const months = year * 12;
       points.push({
         year,
-        current: fv(currentInvestment, months),
-        required: fv(requiredMonthly, months),
+        current: projectGoalFutureValue(currentAssets, currentInvestment, currentReturn, months, salaryGrowthRate),
+        required: projectGoalFutureValue(currentAssets, requiredMonthly, currentReturn, months, salaryGrowthRate),
       });
     }
     return points;
-  }, [currentAssets, currentReturn, currentInvestment, requiredMonthly, targetYears]);
+  }, [currentAssets, currentReturn, currentInvestment, requiredMonthly, targetYears, salaryGrowthRate]);
+
+  const yearsGap = requiredYears === null ? null : Math.round((requiredYears - targetYears) * 10) / 10;
+  const growthNote = salaryGrowthRate > 0 ? `、每年調薪 ${salaryGrowthRate}%` : "";
 
   return (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <InfoBox colorHex="#10b981" dashed className="flex flex-col justify-between !mb-0">
           <div>
-            <p className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>每月最低應投資金額</p>
-            <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>(假設年化報酬率為 {currentReturn}%)</p>
+            <p className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>第一年每月最低應投資金額</p>
+            <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>(假設年化報酬率 {currentReturn}%{growthNote})</p>
           </div>
           <p className="text-xl font-bold mt-2 text-emerald-500">
             {requiredMonthly > 0 ? `${formatNumber(requiredMonthly)} 元` : "0 元 (現有資產已足夠)"}
@@ -200,10 +199,10 @@ export function GoalPlannerResults({
         <InfoBox colorHex="#3b82f6" dashed className="flex flex-col justify-between !mb-0">
           <div>
             <p className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>需要達成的年化報酬率</p>
-            <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>(假設每月投入 {formatNumber(currentInvestment)} 元)</p>
+            <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>(假設每月投入 {formatNumber(currentInvestment)} 元{growthNote})</p>
           </div>
           <p className="text-xl font-bold mt-2 text-blue-500">
-            {requiredReturn !== null ? `${requiredReturn}%` : "100%+ (目標過高需調整)"}
+            {requiredReturn !== null ? `${requiredReturn}%` : "超過 100% (目標過高需調整)"}
           </p>
           <p className="text-[10px] mt-1 opacity-60" style={{ color: "var(--text-muted)" }}>
             當前預期報酬率：{currentReturn}%
@@ -213,13 +212,14 @@ export function GoalPlannerResults({
         <InfoBox colorHex="#f59e0b" dashed className="flex flex-col justify-between !mb-0">
           <div>
             <p className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>維持現況需要幾年達成</p>
-            <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>(月投資 {formatNumber(currentInvestment)} 元、報酬率 {currentReturn}%)</p>
+            <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>(月投資 {formatNumber(currentInvestment)} 元、報酬率 {currentReturn}%{growthNote})</p>
           </div>
           <p className="text-xl font-bold mt-2 text-amber-500">
-            {requiredYears !== null ? `${requiredYears} 年` : "100 年+ (目標過高需調整)"}
+            {requiredYears !== null ? `${requiredYears} 年` : "超過 100 年 (目標過高需調整)"}
           </p>
           <p className="text-[10px] mt-1 opacity-60" style={{ color: "var(--text-muted)" }}>
-            目標年限：{targetYears} 年
+            目標年限 {targetYears} 年
+            {yearsGap !== null && (yearsGap <= 0 ? `，可提早 ${Math.abs(yearsGap)} 年達成 ✅` : `，會晚 ${yearsGap} 年 ⚠️`)}
           </p>
         </InfoBox>
       </div>

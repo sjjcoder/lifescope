@@ -18,7 +18,7 @@ export default function HomePage() {
             {/* Badge */}
             <div className="animate-fade-in-up inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium mb-8" style={{ background: "var(--accent-primary-dim)", color: "var(--accent-primary)", border: "1px solid var(--border-accent)" }}>
               <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "var(--accent-primary)" }} />
-              台灣唯一 · 蒙地卡羅財務模擬引擎
+              免費開源 · 蒙地卡羅財務模擬引擎
             </div>
 
             {/* Headline */}
