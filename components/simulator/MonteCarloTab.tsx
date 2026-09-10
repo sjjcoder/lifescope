@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { BasicParams, MCParams } from "@/lib/calculator";
+import { BasicParams, MCParams, formatTWD } from "@/lib/calculator";
 import {
   SectionHeader,
   SliderInput,
@@ -43,6 +43,11 @@ export default function MonteCarloTab({
 }: MonteCarloTabProps) {
   const activeScenario = CRISIS_SCENARIOS.find((s) => s.id === mcParams.scenarioId);
 
+  // 退休提領期用的是「全局基礎參數」的現有資產，但那組預設值是為累積期設計的（50 萬）。
+  // 用 4% 法則粗略檢查：被動收入撐不起年支出時，成功率必然趨近 0，先講清楚原因免得使用者誤以為是工具壞了。
+  const yearlyExpense = basicParams.monthlyExpense * 12;
+  const isUnderfunded = basicParams.currentAssets * 0.04 < yearlyExpense;
+
   return (
     <>
       <SectionHeader
@@ -83,6 +88,13 @@ export default function MonteCarloTab({
             ? "💡 模擬工作期間：每月持續投入月投資額，不會變賣資產。破產機率為 0。"
             : "⚠️ 模擬退休期間：停止工作投入，每月變賣資產支付月支出，測驗資產存活率。"}
         </p>
+        {mcParams.phase === "decumulation" && (
+          <p className="text-xs mt-2 leading-relaxed" style={{ color: isUnderfunded ? "var(--accent-warning)" : "var(--text-muted)" }}>
+            📌 這裡用的是上方「全局基礎參數」的<b>現有資產（目前 {formatTWD(basicParams.currentAssets)}）</b>，
+            請改成你預計<b>退休當下</b>的資產總額。
+            {isUnderfunded && ` 以目前的數字，4% 法則的年被動收入約 ${formatTWD(basicParams.currentAssets * 0.04)}，低於年支出 ${formatTWD(yearlyExpense)}，成功率會接近 0%。`}
+          </p>
+        )}
       </InfoBox>
 
       {mcParams.phase === "accumulation" ? (
