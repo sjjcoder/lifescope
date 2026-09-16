@@ -1,0 +1,66 @@
+{
+  "client": { "name": "小明", "note": "蝦皮訂單 #123456" },
+  "seed": 20260916,
+
+  "params": {
+    "currentAssets": 800000,
+    "monthlyIncome": 60000,
+    "monthlyExpense": 32000,
+    "monthlyInvestment": 18000,
+    "annualReturn": 7,
+    "investmentYears": 30,
+    "inflationRate": 2,
+    "salaryGrowthRate": 3,
+    "leverageAmount": 0,
+    "leverageRate": 2.5,
+    "leverageYears": 7,
+    "leverageRecurYears": 0,
+    "isBankerEnabled": false,
+    "frictionRate": 0.3,
+    "isInsuranceEnabled": false,
+    "insurancePremium": 1500,
+    "isEventsEnabled": true,
+    "customEvents": [
+      { "year": 3, "name": "結婚", "amount": -600000, "type": "one-time" },
+      { "year": 6, "name": "生子", "amount": -300000, "type": "one-time" }
+    ]
+  },
+  "isLeverageEnabled": false,
+
+  "lifeStages": [
+    { "endYear": 5, "familySize": 1 },
+    { "endYear": 30, "familySize": 3 },
+    { "endYear": 50, "familySize": 2 }
+  ],
+
+  "goal": { "targetAssets": 30000000, "targetYears": 25 },
+
+  "mcParams": {
+    "phase": "accumulation",
+    "volatility": 15,
+    "isScenarioEnabled": true,
+    "scenarioId": "dotcom_2008",
+    "blackSwanYear": 5,
+    "blackSwanDrop": 30,
+    "isJumpEnabled": false,
+    "jumpProbability": 5,
+    "jumpImpact": 20,
+    "isDynamic": false,
+    "dynamicRatio": 20
+  },
+
+  "housingParams": {
+    "initialCapital": 3000000,
+    "housePrice": 12000000,
+    "downPaymentPercent": 20,
+    "loanRate": 2.1,
+    "loanYears": 30,
+    "graceYears": 0,
+    "monthlyRent": 20000,
+    "rentIncreaseRate": 2,
+    "investReturn": 7,
+    "maintenanceRate": 1,
+    "houseAppreciationRate": 2,
+    "yearsToCompare": 40
+  }
+}

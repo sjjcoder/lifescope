@@ -126,7 +126,8 @@ def _monthly_loan_payment(principal, annual_rate, years):
     return principal * r * factor / (factor - 1)
 
 
-def run_simulation(data):
+def run_simulation(data, seed=None):
+    """seed 只給離線工具（backend/report）用來產生可重現的報告；HTTP 請求不會經過這個參數。"""
     initial_assets = _num(data, "initialAssets", 10_000_000, 0.0, 10_000_000_000)
     monthly_contribution = _num(data, "monthlyContribution", 10_000, 0.0, 10_000_000)
     monthly_withdrawal = _num(data, "monthlyWithdrawal", 50_000, 0.0, 10_000_000)
@@ -152,7 +153,7 @@ def run_simulation(data):
     family_multipliers = _build_family_multipliers(data.get("lifeStages", []), years)
     crash_map = _build_crash_map(data, years)
 
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(seed)
 
     # --- 年報酬：對數常態，配對 E[1+r] = 1+μ、Std[r] = σ ---
     if volatility > 0:
