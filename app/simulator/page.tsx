@@ -40,11 +40,18 @@ import { GoalPlannerInputs, GoalPlannerResults } from "@/components/simulator/Go
 
 
 
-const ETF_PRESETS = [
-  { name: "VOO/SPY (美股大盤)", return: 10, vol: 15 },
-  { name: "QQQ (納斯達克)", return: 13, vol: 20 },
-  { name: "VT (全球股市)", return: 8, vol: 14 },
-  { name: "0050 (台灣50)", return: 9, vol: 16 },
+// 市場假設快捷鍵：一律以「資產類別」命名，**不得出現任何具名有價證券**（個股、ETF 代號或名稱）。
+// 原因：《證券投資信託及顧問法》第 4 條將「對有價證券提供分析意見或推介建議並取得報酬」定義為證券投資顧問，
+// 無照經營者可處 5 年以下有期徒刑併科 5,000 萬元以下罰金。實務見解特別點名「內置特定參數、
+// 使用者無需自行設定即可得出結論的軟體」屬違法態樣。把標的名稱換成資產類別後，這些數字回歸
+// 一般性的歷史市場統計（合法側：公開資訊與歷史數據），使用者仍可自行輸入任何數值。
+// 這也與 /terms 的聲明一致 —— 該頁承諾本站「絕不提供任何特定金融商品之買賣建議、投資分析或推薦」。
+// ⚠️ 本站若開始收費，或啟用券商推薦等聯盟收益（構成「間接自第三人取得報酬」），此限制更形重要，請勿改回具名標的。
+const MARKET_PRESETS = [
+  { name: "美股大盤型", return: 10, vol: 15 },
+  { name: "科技成長型", return: 13, vol: 20 },
+  { name: "全球股市型", return: 8, vol: 14 },
+  { name: "台股市值型", return: 9, vol: 16 },
   { name: "保守股債配置", return: 6, vol: 8 }
 ];
 
@@ -425,10 +432,12 @@ function SimulatorContent() {
                   <span className="text-xs opacity-70" style={{ color: "var(--text-muted)" }}>（影響「複利試算」「蒙地卡羅壓測」與「目標回推」）</span>
                 </div>
 
-                {/* ETF 預設移動至此 */}
+                {/* 市場假設快捷鍵（資產類別，非具名標的 —— 見 MARKET_PRESETS 上方註解） */}
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-xs font-medium mr-1" style={{ color: "var(--text-secondary)" }}>快速套用市場假設：</span>
-                  {ETF_PRESETS.map((preset) => {
+                  <span className="text-xs font-medium mr-1" style={{ color: "var(--text-secondary)" }}>
+                    快速套用市場假設<span className="font-normal" style={{ color: "var(--text-muted)" }}>（各資產類別的歷史統計，可自行調整）</span>：
+                  </span>
+                  {MARKET_PRESETS.map((preset) => {
                     const isSelected = basicParams.annualReturn === preset.return && mcParams.volatility === preset.vol;
                     return (
                     <button
